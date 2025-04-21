@@ -48,7 +48,7 @@ cd movie-streaming-app
   docker-compose up -d
   ```
 
-### 4. Verify Services
+### 4. Verify Services (Optional)
 
 - **PostgreSQL**: Connect to port 5433.
 
