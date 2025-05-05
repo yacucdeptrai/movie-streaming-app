@@ -30,9 +30,8 @@ Hệ thống trang web xem phim trực tuyến là một nền tảng phát tr�
   - Phát video ở các độ phân giải (480p, 720p, 1080p, 4K) với bitrate thích ứng (HLS/DASH).
   - Hỗ trợ phụ đề đa ngôn ngữ, nhiều bản âm thanh, và điều chỉnh chất lượng theo băng thông.
   - Lưu lịch sử xem, tiếp tục xem từ vị trí dừng.
-  - Thanh toán gói đăng ký hoặc trả phí theo lượt xem qua Stripe/PayPal.
+  - Thanh toán gói đăng ký hoặc trả phí theo lượt xem qua VNPay.
   - Nhận thông báo thời gian thực (phim mới, hết hạn đăng ký) qua WebSocket.
-  - Tham gia watch party với đồng bộ thời gian thực.
 - **Quản trị viên**:
   - Quản lý nội dung: Tải lên, chỉnh sửa, xóa phim, quản lý siêu dữ liệu.
   - Quản lý người dùng: Xem thông tin, khóa tài khoản, phân tích hành vi.
