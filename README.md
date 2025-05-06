@@ -1,4 +1,4 @@
-# Thiết Kế Hệ Thống Trang Web Xem Phim Trực Tuyến (Bản Cập Nhật)
+# Thiết Kế Hệ Thống Trang Web Xem Phim Trực Tuyến
 
 ## 1. Tổng Quan
 
