@@ -1,0 +1,30 @@
+@startuml
+!theme cerulean
+
+actor "Người dùng" as User
+participant "Web App" as FE
+participant "ELB" as ELB
+boundary "Kong Gateway" as KG
+control "Streaming Service" as SS
+participant "AWS CloudFront" as CF
+participant "Amazon S3" as S3
+
+User -> FE: Chọn phim
+FE -> ELB: GET /api/stream/{movie_id} (HTTPS)
+ELB -> KG: Chuyển yêu cầu
+KG -> SS: Chuyển yêu cầu
+SS -> CF: Tạo presigned URL (s3://bucket/videos/{movie_id}/)
+CF --> SS: Trả presigned URL
+SS --> FE: Trả presigned URL
+FE --> User: Hiển thị URL video
+User -> CF: Xem video với presigned URL (HTTPS)
+CF -> S3: Lấy video
+S3 --> CF: Trả luồng video (HLS/DASH)
+CF --> User: Phát video
+
+alt Video không tồn tại
+    SS --> FE: Báo lỗi (Phim không tồn tại)
+    FE --> User: Hiển thị lỗi
+end alt
+
+@enduml

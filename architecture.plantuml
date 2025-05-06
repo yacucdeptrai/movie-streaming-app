@@ -1,0 +1,73 @@
+@startuml
+top to bottom direction
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+actor "Người dùng" as NguoiDung
+actor "Quản trị viên" as QuanTri
+actor "Nhà cung cấp nội dung" as NhaCungCap
+
+' Cân bằng tải
+[ELB]
+
+' Tầng giao diện
+package "Giao diện" {
+  [Web App]
+}
+
+' Tầng cổng API
+package "Cổng API" {
+  [Kong Gateway]
+}
+
+' Tầng dịch vụ vi mô
+package "Microservices" {
+  [Search Service]
+  [Streaming Service]
+  [ContentVideo Service]
+}
+
+' Tầng lưu trữ dữ liệu
+package "Lưu trữ dữ liệu" {
+  [PostgreSQL]
+}
+
+' Tầng lưu trữ và xử lý
+package "Storage & Processing" {
+  [Amazon S3]
+  [AWS CloudFront]
+  [AWS Elemental MediaConvert]
+}
+
+' === Mối quan hệ ===
+
+' Diễn viên đến ELB/Giao diện/Lưu trữ
+NguoiDung --> [ELB] : Gửi yêu cầu HTTPS
+QuanTri --> [ELB] : Quản lý nội dung (HTTPS)
+NhaCungCap --> [Amazon S3] : Tải video gốc (presigned URL)
+[ELB] --> [Kong Gateway] : Chuyển tiếp yêu cầu
+
+' Giao diện đến Cổng API
+[Web App] --> [Kong Gateway] : Gửi yêu cầu API (HTTPS)
+
+' Cổng API đến Microservices
+[Kong Gateway] --> [Search Service] : Tìm phim (GET /search)
+[Kong Gateway] --> [Streaming Service] : Lấy URL video (GET /stream)
+[Kong Gateway] --> [ContentVideo Service] : Quản lý video & metadata (POST /content)
+
+' Microservices đến Storage/Processing
+[Search Service] --> [PostgreSQL] : Truy vấn metadata phim
+[Streaming Service] --> [AWS CloudFront] : Trả presigned URL
+[AWS CloudFront] --> [Amazon S3] : Lấy nội dung video
+[Web App] --> NguoiDung : Hiển thị URL video
+
+NguoiDung --> [AWS CloudFront] : Xem video (HTTPS)
+
+' Xử lý nội dung
+[ContentVideo Service] --> [Amazon S3] : Kích hoạt tải video
+[ContentVideo Service] --> [AWS Elemental MediaConvert] : Mã hóa video (HLS/DASH)
+[AWS Elemental MediaConvert] --> [Amazon S3] : Lưu video đã mã hóa
+[ContentVideo Service] --> [PostgreSQL] : Lưu/Cập nhật metadata
+[QuanTri] --> [Web App] : Nhập metadata
+
+@enduml

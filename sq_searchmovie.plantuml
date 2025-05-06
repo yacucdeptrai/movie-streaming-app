@@ -1,0 +1,26 @@
+@startuml
+!theme cerulean
+
+actor "Người dùng" as User
+participant "Web App" as FE
+participant "ELB" as ELB
+boundary "Kong Gateway" as KG
+control "Search Service" as SRS
+database "PostgreSQL" as PG
+
+User -> FE: Nhập từ khóa tìm kiếm
+FE -> ELB: GET /api/search?query={keyword} (HTTPS)
+ELB -> KG: Chuyển yêu cầu
+KG -> SRS: Chuyển yêu cầu
+SRS -> PG: Truy vấn tìm kiếm
+PG --> SRS: Trả về danh sách phim
+SRS --> FE: Trả về kết quả
+FE --> User: Hiển thị danh sách phim
+
+alt Không tìm thấy
+    PG --> SRS: Trả về danh sách rỗng
+    SRS --> FE: Trả về rỗng
+    FE --> User: Hiển thị "Không tìm thấy"
+end alt
+
+@enduml
