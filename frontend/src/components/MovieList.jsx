@@ -41,62 +41,80 @@ function MovieList({ onSelectMovie }) {
   };
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">Danh Sách Phim</h2>
-
+    <div className="h-full w-full max-w-7xl flex flex-col">
       {/* Thanh tìm kiếm */}
-      <div className="mb-4">
+      <div className="p-4 bg-gray-800 shadow-lg">
+        <h2 className="text-3xl font-bold mb-4 text-center">Danh Sách Phim</h2>
         <input
           type="text"
           placeholder="Tìm kiếm phim..."
           value={query}
           onChange={handleSearch}
-          className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+          className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
         />
       </div>
 
       {/* Danh sách phim */}
-      {loading ? (
-        <div className="flex justify-center items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
-        </div>
-      ) : movies.length === 0 ? (
-        <p className="text-gray-600">Không có phim nào để hiển thị.</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {movies.map((movie) => (
-            <div
-              key={movie.movie_id}
-              className="bg-white p-4 rounded-lg shadow hover:shadow-lg cursor-pointer"
-              onClick={() => onSelectMovie(movie)}
-            >
-              <h3 className="text-lg font-semibold">{movie.title}</h3>
-              <p className="text-gray-600">{movie.description}</p>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="flex-1 overflow-y-auto p-4">
+        {loading ? (
+          <div className="flex justify-center items-center h-full">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        ) : movies.length === 0 ? (
+          <p className="text-gray-400 text-center h-full flex items-center justify-center">Không có phim nào để hiển thị.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {movies.map((movie) => (
+              <div
+                key={movie.movie_id}
+                className="bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 cursor-pointer"
+                onClick={() => onSelectMovie(movie)}
+              >
+                {/* Thumbnail */}
+                <div className="w-full h-48 bg-gray-700 flex items-center justify-center">
+                  <img
+                    src={movie.thumbnail || 'https://via.placeholder.com/300x200?text=No+Image'}
+                    alt={movie.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                {/* Thông tin phim */}
+                <div className="p-4">
+                  <h3 className="text-xl font-semibold truncate">{movie.title}</h3>
+                  <p className="text-gray-400 text-sm mt-1 line-clamp-2">{movie.description}</p>
+                  <div className="mt-2 flex justify-between text-gray-500 text-sm">
+                    <span>{movie.genre || 'Không có'}</span>
+                    <span>{movie.release_year || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Phân trang */}
       {!loading && movies.length > 0 && (
-        <div className="mt-4 flex justify-center space-x-2">
-          <button
-            onClick={() => handlePageChange(page - 1)}
-            disabled={page === 1}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-400"
-          >
-            Trước
-          </button>
-          <span className="px-4 py-2">
-            Trang {pagination.current_page} / {pagination.total_pages}
-          </span>
-          <button
-            onClick={() => handlePageChange(page + 1)}
-            disabled={page === pagination.total_pages}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-400"
-          >
-            Sau
-          </button>
+        <div className="p-4 bg-gray-800 shadow-lg">
+          <div className="flex justify-center space-x-3">
+            <button
+              onClick={() => handlePageChange(page - 1)}
+              disabled={page === 1}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-600 hover:bg-blue-700 transition-colors"
+            >
+              Trước
+            </button>
+            <span className="px-4 py-2 text-gray-300">
+              Trang {pagination.current_page} / {pagination.total_pages}
+            </span>
+            <button
+              onClick={() => handlePageChange(page + 1)}
+              disabled={page === pagination.total_pages}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-600 hover:bg-blue-700 transition-colors"
+            >
+              Sau
+            </button>
+          </div>
         </div>
       )}
     </div>

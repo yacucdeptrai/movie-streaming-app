@@ -14,7 +14,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="h-screen w-screen bg-gray-900 text-white font-sans overflow-hidden flex items-center justify-center">
       {selectedMovie ? (
         <MovieDetail movie={selectedMovie} onBack={handleBack} />
       ) : (
