@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: streaming-service
-        image: streaming-service:latest  # Sử dụng image bạn đã build
+        image: streaming-service:latest
         ports:
         - containerPort: 8002
         env:

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/cloudfront/sign"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -111,6 +112,13 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/api/stream/{movie_id}", streamHandler).Methods("GET")
 
+	// Thêm middleware CORS
+	corsHandler := handlers.CORS(
+		handlers.AllowedOrigins([]string{"http://localhost:5173"}), // Cho phép origin của frontend
+		handlers.AllowedMethods([]string{"GET", "OPTIONS"}),        // Cho phép các phương thức
+		handlers.AllowedHeaders([]string{"Content-Type"}),          // Cho phép header
+	)
+
 	log.Println("Streaming Service starting on :8002...")
-	log.Fatal(http.ListenAndServe(":8002", router))
+	log.Fatal(http.ListenAndServe(":8002", corsHandler(router)))
 }
