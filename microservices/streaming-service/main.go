@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -123,10 +124,43 @@ func getCloudFrontPresignedURL(key string) (string, error) {
 }
 
 // Handler cho API /api/stream/{movie_id}
+// Handler cho API /api/stream/{movie_id}
 func streamHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	movieID := vars["movie_id"]
-	key := fmt.Sprintf("%s/hls/alo_1080p.m3u8", movieID)
+	folder := fmt.Sprintf("%s/hls/", movieID)
+
+	// Liệt kê file .m3u8 trong thư mục
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String("us-east-1"),
+	})
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to create AWS session: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	svc := s3.New(sess)
+	resp, err := svc.ListObjectsV2(&s3.ListObjectsV2Input{
+		Bucket: aws.String(bucketName),
+		Prefix: aws.String(folder),
+	})
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to list objects: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Tìm file .m3u8
+	var key string
+	for _, obj := range resp.Contents {
+		if strings.HasSuffix(*obj.Key, ".m3u8") {
+			key = *obj.Key
+			break
+		}
+	}
+	if key == "" {
+		http.Error(w, "no .m3u8 file found in folder", http.StatusNotFound)
+		return
+	}
 
 	signedURL, err := getCloudFrontPresignedURL(key)
 	if err != nil {
