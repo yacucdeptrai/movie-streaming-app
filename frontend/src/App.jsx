@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import MovieList from './components/MovieList';
 import MovieDetail from './components/MovieDetail';
+import './App.css';
 
 function App() {
   const [selectedMovie, setSelectedMovie] = useState(null);
@@ -14,7 +15,7 @@ function App() {
   };
 
   return (
-    <div className="h-screen w-screen bg-gray-900 text-white font-sans overflow-hidden flex items-center justify-center">
+    <div className="app-container">
       {selectedMovie ? (
         <MovieDetail movie={selectedMovie} onBack={handleBack} />
       ) : (

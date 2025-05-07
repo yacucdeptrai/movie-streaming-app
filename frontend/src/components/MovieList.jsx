@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import './MovieList.css';
 
 function MovieList({ onSelectMovie }) {
   const [movies, setMovies] = useState([]);
@@ -41,48 +42,48 @@ function MovieList({ onSelectMovie }) {
   };
 
   return (
-    <div className="h-full w-full max-w-7xl flex flex-col">
+    <div className="movie-list-container">
       {/* Thanh tìm kiếm */}
-      <div className="p-4 bg-gray-800 shadow-lg">
-        <h2 className="text-3xl font-bold mb-4 text-center">Danh Sách Phim</h2>
+      <div className="header">
+        <h2 className="header-title">Danh Sách Phim</h2>
         <input
           type="text"
           placeholder="Tìm kiếm phim..."
           value={query}
           onChange={handleSearch}
-          className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+          className="search-input"
         />
       </div>
 
       {/* Danh sách phim */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="movie-grid-container">
         {loading ? (
-          <div className="flex justify-center items-center h-full">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          <div className="loading-spinner-container">
+            <div className="loading-spinner"></div>
           </div>
         ) : movies.length === 0 ? (
-          <p className="text-gray-400 text-center h-full flex items-center justify-center">Không có phim nào để hiển thị.</p>
+          <p className="no-movies-message">Không có phim nào để hiển thị.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="movie-grid">
             {movies.map((movie) => (
               <div
                 key={movie.movie_id}
-                className="bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 cursor-pointer"
+                className="movie-card"
                 onClick={() => onSelectMovie(movie)}
               >
                 {/* Thumbnail */}
-                <div className="w-full h-48 bg-gray-700 flex items-center justify-center">
+                <div className="thumbnail-container">
                   <img
                     src={movie.thumbnail || 'https://via.placeholder.com/300x200?text=No+Image'}
                     alt={movie.title}
-                    className="w-full h-full object-cover"
+                    className="thumbnail"
                   />
                 </div>
                 {/* Thông tin phim */}
-                <div className="p-4">
-                  <h3 className="text-xl font-semibold truncate">{movie.title}</h3>
-                  <p className="text-gray-400 text-sm mt-1 line-clamp-2">{movie.description}</p>
-                  <div className="mt-2 flex justify-between text-gray-500 text-sm">
+                <div className="movie-info">
+                  <h3 className="movie-title">{movie.title}</h3>
+                  <p className="movie-description">{movie.description}</p>
+                  <div className="movie-meta">
                     <span>{movie.genre || 'Không có'}</span>
                     <span>{movie.release_year || 'N/A'}</span>
                   </div>
@@ -95,22 +96,22 @@ function MovieList({ onSelectMovie }) {
 
       {/* Phân trang */}
       {!loading && movies.length > 0 && (
-        <div className="p-4 bg-gray-800 shadow-lg">
-          <div className="flex justify-center space-x-3">
+        <div className="pagination-container">
+          <div className="pagination">
             <button
               onClick={() => handlePageChange(page - 1)}
               disabled={page === 1}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-600 hover:bg-blue-700 transition-colors"
+              className="pagination-button"
             >
               Trước
             </button>
-            <span className="px-4 py-2 text-gray-300">
+            <span className="pagination-text">
               Trang {pagination.current_page} / {pagination.total_pages}
             </span>
             <button
               onClick={() => handlePageChange(page + 1)}
               disabled={page === pagination.total_pages}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-600 hover:bg-blue-700 transition-colors"
+              className="pagination-button"
             >
               Sau
             </button>

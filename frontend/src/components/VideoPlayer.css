@@ -1,0 +1,56 @@
+/* VideoPlayer.css */
+.video-player-container {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0; /* inset-0 */
+    z-index: 50; /* z-50 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: black; /* bg-black */
+  }
+  
+  .back-button-container {
+    position: absolute;
+    top: 1rem; /* top-4 */
+    left: 1rem; /* left-4 */
+    z-index: 50; /* z-50 */
+  }
+  
+  .back-button {
+    color: white;
+    background-color: rgba(0, 0, 0, 0.7); /* bg-black bg-opacity-70 */
+    padding: 0.5rem 1rem; /* px-4 py-2 */
+    border-radius: 0.5rem; /* rounded */
+    transition: background-color 0.3s; /* transition */
+  }
+  
+  .back-button:hover {
+    background-color: rgba(0, 0, 0, 0.9); /* hover:bg-opacity-90 */
+  }
+  
+  .video-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 1280px; /* max-w-5xl */
+  }
+  
+  .video-element {
+    width: 100%;
+    height: auto;
+    max-height: 90vh; /* max-h-[90vh] */
+    object-fit: contain;
+    z-index: 10; /* z-10 */
+  }
+  
+  .error-message {
+    position: absolute;
+    bottom: 1rem; /* bottom-4 */
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: #ef4444; /* text-red-500 */
+    z-index: 20; /* z-20 */
+  }
