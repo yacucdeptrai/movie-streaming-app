@@ -9,8 +9,13 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/api': {
+      '/api/stream': {
         target: 'http://localhost:8002',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api/search': {
+        target: 'http://localhost:8001',
         changeOrigin: true,
         secure: false,
       },

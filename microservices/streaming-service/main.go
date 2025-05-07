@@ -10,7 +10,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudfront/sign"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -20,6 +23,7 @@ var (
 	distributionDomain = os.Getenv("DISTRIBUTION_DOMAIN")
 	privateKeyPath     = os.Getenv("PRIVATE_KEY_PATH")
 	keyPairId          = os.Getenv("KEY_PAIR_ID")
+	bucketName         = "movie-streaming-dest" // Thêm bucket name
 )
 
 // Kiểm tra biến môi trường
@@ -70,8 +74,34 @@ func loadPrivateKey(path string) (*rsa.PrivateKey, error) {
 	return privateKey, nil
 }
 
+// Kiểm tra file tồn tại trên S3
+func checkFileExists(key string) (bool, error) {
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String("us-east-1"),
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to create AWS session: %v", err)
+	}
+
+	svc := s3.New(sess)
+	_, err = svc.HeadObject(&s3.HeadObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return false, fmt.Errorf("file does not exist: %v", err)
+	}
+	return true, nil
+}
+
 // Tạo presigned URL từ CloudFront
 func getCloudFrontPresignedURL(key string) (string, error) {
+	// Kiểm tra file tồn tại trên S3
+	exists, err := checkFileExists(key)
+	if err != nil || !exists {
+		return "", fmt.Errorf("file %s does not exist on S3: %v", key, err)
+	}
+
 	privateKey, err := loadPrivateKey(privateKeyPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to load private key: %v", err)
@@ -96,7 +126,7 @@ func getCloudFrontPresignedURL(key string) (string, error) {
 func streamHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	movieID := vars["movie_id"]
-	key := fmt.Sprintf("%s/hls/atri13_1080p.m3u8", movieID) // Giả định key dựa trên movie_id
+	key := fmt.Sprintf("%s/hls/alo_1080p.m3u8", movieID)
 
 	signedURL, err := getCloudFrontPresignedURL(key)
 	if err != nil {
@@ -114,9 +144,9 @@ func main() {
 
 	// Thêm middleware CORS
 	corsHandler := handlers.CORS(
-		handlers.AllowedOrigins([]string{"http://localhost:5173"}), // Cho phép origin của frontend
-		handlers.AllowedMethods([]string{"GET", "OPTIONS"}),        // Cho phép các phương thức
-		handlers.AllowedHeaders([]string{"Content-Type"}),          // Cho phép header
+		handlers.AllowedOrigins([]string{"http://localhost:5173"}),
+		handlers.AllowedMethods([]string{"GET", "OPTIONS"}),
+		handlers.AllowedHeaders([]string{"Content-Type"}),
 	)
 
 	log.Println("Streaming Service starting on :8002...")

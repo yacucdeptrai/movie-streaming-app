@@ -26,6 +26,10 @@ spec:
           value: "/app/pk-APKAREOSHZ2RHFQO4IH5.pem"
         - name: KEY_PAIR_ID
           value: "APKAREOSHZ2RHFQO4IH5"
+        - name: AWS_ACCESS_KEY_ID
+          value: "AKIAREOSHZ2RIFE54GAH"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "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"
         volumeMounts:
         - name: secret-volume
           mountPath: "/app"

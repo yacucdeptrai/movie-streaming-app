@@ -20,16 +20,8 @@ spec:
         ports:
         - containerPort: 8001
         env:
-        - name: POSTGRES_USER
-          value: "admindb"
-        - name: POSTGRES_PASSWORD
-          value: "admin123"
-        - name: POSTGRES_DB
-          value: "movie_db"
-        - name: POSTGRES_HOST
-          value: "microservices/search-service/create_table.py"
-        - name: POSTGRES_PORT
-          value: "5432"
+        - name: DATABASE_URL
+          value: "postgresql://admindb:admin123@movie-db.cohuqu6m26h2.us-east-1.rds.amazonaws.com:5432/movie_db"
 ---
 apiVersion: v1
 kind: Service
