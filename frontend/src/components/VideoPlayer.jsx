@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Hls from 'hls.js';
 
-function VideoPlayer({ url }) {
+function VideoPlayer({ url, onBack }) {
   const videoRef = useRef(null);
+  const [playError, setPlayError] = useState(null);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -14,17 +15,17 @@ function VideoPlayer({ url }) {
       hls = new Hls();
       hls.loadSource(url);
       hls.attachMedia(video);
-
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         video.play().catch((error) => {
           console.error('Error playing video:', error);
+          setPlayError('Không thể tự động phát video. Vui lòng nhấn nút Play.');
         });
       });
-
       hls.on(Hls.Events.ERROR, (event, data) => {
         console.error('HLS error:', event, data);
         if (data.fatal) {
           hls.destroy();
+          setPlayError('Lỗi tải video. Vui lòng thử lại sau.');
         }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -32,6 +33,7 @@ function VideoPlayer({ url }) {
       video.addEventListener('loadedmetadata', () => {
         video.play().catch((error) => {
           console.error('Error playing video:', error);
+          setPlayError('Không thể tự động phát video. Vui lòng nhấn nút Play.');
         });
       });
     }
@@ -48,21 +50,28 @@ function VideoPlayer({ url }) {
       {/* Nút quay lại */}
       <div className="absolute top-4 left-4 z-50">
         <button
-          onClick={() => window.history.back()}
+          onClick={onBack}
           className="text-white bg-black bg-opacity-70 px-4 py-2 rounded hover:bg-opacity-90 transition"
         >
-          ← Quay lại
+          Thu nhỏ
         </button>
       </div>
 
       {/* Video player */}
-      <video
-        ref={videoRef}
-        controls
-        className="w-full max-w-5xl h-auto max-h-[90vh] object-contain z-10"
-        autoPlay
-        muted={false}
-      />
+      <div className="relative w-full max-w-5xl">
+        <video
+          ref={videoRef}
+          controls
+          className="w-full h-auto max-h-[90vh] object-contain z-10"
+          autoPlay
+          muted={false}
+        />
+        {playError && (
+          <div className="absolute bottom-4 left-0 right-0 text-center text-red-500 z-20">
+            {playError}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
