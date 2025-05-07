@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: streaming-service
+  labels:
+    app: streaming-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: streaming-service
+  template:
+    metadata:
+      labels:
+        app: streaming-service
+    spec:
+      containers:
+      - name: streaming-service
+        image: streaming-service:latest  # Sử dụng image bạn đã build
+        ports:
+        - containerPort: 8002
+        env:
+        - name: DISTRIBUTION_DOMAIN
+          value: "d1henbbhjbyad4.cloudfront.net"
+        - name: PRIVATE_KEY_PATH
+          value: "/app/pk-APKAREOSHZ2RHFQO4IH5.pem"
+        - name: KEY_PAIR_ID
+          value: "APKAREOSHZ2RHFQO4IH5"
+        volumeMounts:
+        - name: secret-volume
+          mountPath: "/app"
+          readOnly: true
+      volumes:
+      - name: secret-volume
+        secret:
+          secretName: streaming-secret
+          items:
+          - key: pk-APKAREOSHZ2RHFQO4IH5.pem
+            path: pk-APKAREOSHZ2RHFQO4IH5.pem
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: streaming-service
+spec:
+  selector:
+    app: streaming-service
+  ports:
+  - port: 8002
+    targetPort: 8002
+  type: ClusterIP

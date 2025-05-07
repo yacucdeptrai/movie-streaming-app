@@ -15,11 +15,29 @@ import (
 )
 
 // Cấu hình CloudFront
-const (
-	distributionDomain = "d1henbbhjbyad4.cloudfront.net" // Thay bằng domain của bạn
-	privateKeyPath     = "pk-APKAREOSHZ2RHFQO4IH5.pem"   // Đường dẫn đến private key
-	keyPairId          = "APKAREOSHZ2RHFQO4IH5"          // Key Pair ID từ CloudFront
+var (
+	distributionDomain = os.Getenv("DISTRIBUTION_DOMAIN")
+	privateKeyPath     = os.Getenv("PRIVATE_KEY_PATH")
+	keyPairId          = os.Getenv("KEY_PAIR_ID")
 )
+
+// Kiểm tra biến môi trường
+func init() {
+	if distributionDomain == "" {
+		log.Fatal("DISTRIBUTION_DOMAIN environment variable is not set")
+	}
+	if privateKeyPath == "" {
+		log.Fatal("PRIVATE_KEY_PATH environment variable is not set")
+	}
+	if keyPairId == "" {
+		log.Fatal("KEY_PAIR_ID environment variable is not set")
+	}
+
+	// Kiểm tra file private key tồn tại
+	if _, err := os.Stat(privateKeyPath); os.IsNotExist(err) {
+		log.Fatalf("Private key file does not exist at path: %s", privateKeyPath)
+	}
+}
 
 // Đọc và parse private key từ file
 func loadPrivateKey(path string) (*rsa.PrivateKey, error) {
@@ -37,7 +55,15 @@ func loadPrivateKey(path string) (*rsa.PrivateKey, error) {
 	// Parse private key
 	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse private key: %v", err)
+		// Thử parse định dạng PKCS8 nếu PKCS1 thất bại
+		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse private key: %v", err)
+		}
+		if rsaKey, ok := key.(*rsa.PrivateKey); ok {
+			return rsaKey, nil
+		}
+		return nil, fmt.Errorf("parsed key is not an RSA private key")
 	}
 
 	return privateKey, nil
