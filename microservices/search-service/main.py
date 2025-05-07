@@ -35,8 +35,8 @@ async def search_movies(
         # Tính offset cho phân trang
         offset = (page - 1) * limit
 
-        # Truy vấn cơ bản
-        base_query = "SELECT movie_id, title, description FROM movies"
+        # Truy vấn cơ bản (có thêm genre và release_year)
+        base_query = "SELECT movie_id, title, description, genre, release_year FROM movies"
         count_query = "SELECT COUNT(*) FROM movies"
         params = []
 
@@ -63,9 +63,18 @@ async def search_movies(
         cursor.close()
         conn.close()
 
-        # Chuẩn bị phản hồi
+        # Chuẩn bị phản hồi (đã bao gồm genre và release_year)
         response = {
-            "movies": [{"movie_id": str(movie[0]), "title": movie[1], "description": movie[2]} for movie in movies],
+            "movies": [
+                {
+                    "movie_id": str(movie[0]),
+                    "title": movie[1],
+                    "description": movie[2],
+                    "genre": movie[3],
+                    "release_year": movie[4]
+                }
+                for movie in movies
+            ],
             "pagination": {
                 "current_page": page,
                 "limit": limit,
