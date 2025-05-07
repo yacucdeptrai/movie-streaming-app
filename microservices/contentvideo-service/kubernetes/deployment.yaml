@@ -22,6 +22,10 @@ spec:
         env:
         - name: DATABASE_HOST
           value: "movie-db.cohuqu6m26h2.us-east-1.rds.amazonaws.com"
+        - name: DATABASE_USER
+          value: "admindb"
+        - name: DATABASE_PASSWORD 
+          value: "admin123"
         - name: AWS_ACCESS_KEY_ID
           value: "AKIAREOSHZ2RIFE54GAH"
         - name: AWS_SECRET_ACCESS_KEY

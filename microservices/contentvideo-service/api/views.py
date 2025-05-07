@@ -1,7 +1,6 @@
 import boto3
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-import json
 import os
 from django.conf import settings
 import psycopg2
@@ -11,26 +10,23 @@ def upload_video(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-    # Lấy dữ liệu từ body
-    try:
-        body = json.loads(request.body)
-        title = body.get('title')
-        description = body.get('description')
-        video_file = body.get('video_file')
-        if not all([title, description, video_file]):
-            return JsonResponse({'error': 'Missing required fields'}, status=400)
-    except Exception as e:
-        return JsonResponse({'error': 'Invalid JSON: ' + str(e)}, status=400)
+    # Lấy dữ liệu từ form
+    title = request.POST.get('title')
+    description = request.POST.get('description')
+    video_file = request.FILES.get('video_file')
+    if not all([title, description, video_file]):
+        return JsonResponse({'error': 'Missing required fields'}, status=400)
 
     # Kết nối PostgreSQL với SSL
     try:
         conn = psycopg2.connect(
             dbname='movie_db',
-            user='admindb',
-            password='admin123',
+            user=os.getenv('DATABASE_USER', 'admindb'),
+            password=os.getenv('DATABASE_PASSWORD', 'admin123'),
             host=settings.DATABASES['default']['HOST'],
             port='5432',
-            sslmode='require'  # Bật SSL
+            sslmode='verify-full',
+            sslrootcert='/app/us-east-1-bundle.pem'
         )
         cursor = conn.cursor()
         cursor.execute("INSERT INTO movies (title, description) VALUES (%s, %s) RETURNING movie_id",
@@ -50,8 +46,8 @@ def upload_video(request):
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
             region_name=settings.AWS_REGION
         )
-        video_key = f"{movie_id}/input/{video_file.split('/')[-1]}"
-        s3_client.upload_file(video_file, settings.AWS_S3_ORIGIN_BUCKET, video_key)
+        video_key = f"{movie_id}/input/{video_file.name}"
+        s3_client.upload_fileobj(video_file, settings.AWS_S3_ORIGIN_BUCKET, video_key)
     except Exception as e:
         return JsonResponse({'error': 'S3 upload error: ' + str(e)}, status=500)
 
@@ -101,7 +97,7 @@ def upload_video(request):
         response = mediaconvert_client.create_job(
             Role=settings.AWS_MEDIACONVERT_ROLE_ARN,
             Settings=job_settings,
-            Queue="arn:aws:mediaconvert:us-east-1:<your-account-id>:queues/Default"
+            Queue="arn:aws:mediaconvert:us-east-1:078287195810:queues/Default"
         )
     except Exception as e:
         return JsonResponse({'error': 'MediaConvert error: ' + str(e)}, status=500)
