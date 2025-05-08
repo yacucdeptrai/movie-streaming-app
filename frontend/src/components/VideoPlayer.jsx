@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import Hls from 'hls.js';
-import './VideoPlayer.css';
 
 function VideoPlayer({ url, onBack }) {
   const videoRef = useRef(null);
@@ -47,28 +46,28 @@ function VideoPlayer({ url, onBack }) {
   }, [url]);
 
   return (
-    <div className="video-player-container">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black">
       {/* Nút quay lại */}
-      <div className="back-button-container">
+      <div className="absolute top-4 left-4 z-50">
         <button
           onClick={onBack}
-          className="back-button"
+          className="bg-black bg-opacity-70 text-white px-4 py-2 rounded transition-colors hover:bg-opacity-90"
         >
           Thu nhỏ
         </button>
       </div>
 
       {/* Video player */}
-      <div className="video-wrapper">
+      <div className="relative w-full max-w-5xl">
         <video
           ref={videoRef}
           controls
-          className="video-element"
+          className="w-full h-auto max-h-[90vh] object-contain z-10"
           autoPlay
           muted={false}
         />
         {playError && (
-          <div className="error-message">{playError}</div>
+          <div className="absolute bottom-4 left-0 right-0 text-center text-red-500 z-20">{playError}</div>
         )}
       </div>
     </div>
