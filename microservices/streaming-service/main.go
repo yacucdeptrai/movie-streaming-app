@@ -178,7 +178,7 @@ func main() {
 
 	// Thêm middleware CORS
 	corsHandler := handlers.CORS(
-		handlers.AllowedOrigins([]string{"http://localhost:5173"}),
+		handlers.AllowedOrigins([]string{"http://localhost:8080", "http://localhost:5173"}),
 		handlers.AllowedMethods([]string{"GET", "OPTIONS"}),
 		handlers.AllowedHeaders([]string{"Content-Type"}),
 	)
