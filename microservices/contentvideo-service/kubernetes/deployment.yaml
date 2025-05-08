@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: contentvideo-service
-        image: contentvideo-service:latest
+        image: yadeptrai/contentvideo-service:latest
         ports:
         - containerPort: 8003
         env:

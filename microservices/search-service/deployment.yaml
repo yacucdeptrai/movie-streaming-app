@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: search-service
-        image: search-service:latest
+        image: yadeptrai/search-service:latest
         ports:
         - containerPort: 8001
         env:

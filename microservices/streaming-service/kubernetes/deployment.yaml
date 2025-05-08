@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: streaming-service
-        image: streaming-service:latest
+        image: yadeptrai/streaming-service:latest
         ports:
         - containerPort: 8002
         env:
