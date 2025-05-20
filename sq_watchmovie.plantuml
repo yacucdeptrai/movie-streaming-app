@@ -3,23 +3,24 @@
 
 actor "Người dùng" as User
 participant "Web App" as FE
-participant "ELB" as ELB
-boundary "Kong Gateway" as KG
+boundary "ngrok" as ngrok
+boundary "Kong Ingress Controller" as KG
 control "Streaming Service" as SS
 participant "AWS CloudFront" as CF
 participant "Amazon S3" as S3
 
 User -> FE: Chọn phim
-FE -> ELB: GET /api/stream/{movie_id} (HTTPS)
-ELB -> KG: Chuyển yêu cầu
+FE -> ngrok: GET /api/stream/{movie_id} (HTTPS)
+ngrok -> KG: Chuyển yêu cầu
 KG -> SS: Chuyển yêu cầu
-SS -> CF: Tạo presigned URL (s3://bucket/videos/{movie_id}/)
+note right: Streaming Service đã bật CORS cho origin http://localhost:8080 và URL ngrok
+SS -> CF: Tạo presigned URL (s3://movie-streaming-dest/{movie_id}/hls/)
 CF --> SS: Trả presigned URL
 SS --> FE: Trả presigned URL
 FE --> User: Hiển thị URL video
 User -> CF: Xem video với presigned URL (HTTPS)
 CF -> S3: Lấy video
-S3 --> CF: Trả luồng video (HLS/DASH)
+S3 --> CF: Trả luồng video (HLS)
 CF --> User: Phát video
 
 alt Video không tồn tại

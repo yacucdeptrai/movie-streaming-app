@@ -7,31 +7,29 @@ participant "API/SFTP" as API
 participant "Amazon S3" as S3
 control "ContentVideo Service" as CVS
 participant "AWS Elemental MediaConvert" as MC
-database "PostgreSQL" as PG
+database "Amazon RDS PostgreSQL" as PG
 participant "Web App" as FE
-participant "ELB" as ELB
-boundary "Kong Gateway" as KG
+boundary "ngrok" as ngrok
+boundary "Kong Ingress Controller" as KG
 
 ' Tải video
 Provider -> API: Gửi video qua API/SFTP (presigned URL)
-API -> S3: Lưu video (s3://bucket/origin/{movie_id}/)
+API -> S3: Lưu video (s3://movie-streaming-origin/{movie_id}/)
 API -> CVS: Thông báo video mới
 CVS -> S3: Kiểm tra video
 alt Video hợp lệ
-    CVS -> MC: Gọi mã hóa (HLS/DASH, DRM)
-    MC -> S3: Lưu video mã hóa (s3://bucket/dest/{movie_id}/)
+    CVS -> MC: Gọi mã hóa (HLS, 1080p)
+    MC -> S3: Lưu video mã hóa (s3://movie-streaming-dest/{movie_id}/hls/)
     S3 --> CVS: Xác nhận lưu
-    CVS -> FE: Thông báo (video_uploaded)
 else Video không hợp lệ
     CVS --> API: Báo lỗi
     API --> Provider: Hiển thị lỗi
 end alt
 
 ' Cập nhật siêu dữ liệu
-FE -> Admin: Thông báo video mới
-Admin -> FE: Nhập siêu dữ liệu
-FE -> ELB: POST /api/content/movies (HTTPS)
-ELB -> KG: Chuyển yêu cầu
+Admin -> FE: Kiểm tra trạng thái video qua giao diện
+FE -> ngrok: POST /api/content/movies (HTTPS)
+ngrok -> KG: Chuyển yêu cầu
 KG -> CVS: Chuyển yêu cầu
 CVS -> PG: Lưu siêu dữ liệu
 PG --> CVS: Xác nhận lưu

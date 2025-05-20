@@ -27,9 +27,15 @@ spec:
         - name: KEY_PAIR_ID
           value: "APKAREOSHZ2RHFQO4IH5"
         - name: AWS_ACCESS_KEY_ID
-          value: "AKIAREOSHZ2RIFE54GAH"
+          valueFrom:
+            secretKeyRef:
+              name: contentvideo-secrets
+              key: AWS_ACCESS_KEY_ID
         - name: AWS_SECRET_ACCESS_KEY
-          value: "ZhlJO1f6XCEM2MAumOzAQmUoln+I1kCUFtsOBS/g"
+          valueFrom:
+            secretKeyRef:
+              name: contentvideo-secrets
+              key: AWS_SECRET_ACCESS_KEY
         volumeMounts:
         - name: secret-volume
           mountPath: "/app"

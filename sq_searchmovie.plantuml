@@ -3,15 +3,16 @@
 
 actor "Người dùng" as User
 participant "Web App" as FE
-participant "ELB" as ELB
-boundary "Kong Gateway" as KG
+boundary "ngrok" as ngrok
+boundary "Kong Ingress Controller" as KG
 control "Search Service" as SRS
-database "PostgreSQL" as PG
+database "Amazon RDS PostgreSQL" as PG
 
 User -> FE: Nhập từ khóa tìm kiếm
-FE -> ELB: GET /api/search?query={keyword} (HTTPS)
-ELB -> KG: Chuyển yêu cầu
+FE -> ngrok: GET /api/search?query={keyword} (HTTPS)
+ngrok -> KG: Chuyển yêu cầu
 KG -> SRS: Chuyển yêu cầu
+note right: Search Service đã bật CORS cho origin http://localhost:8080 và URL ngrok
 SRS -> PG: Truy vấn tìm kiếm
 PG --> SRS: Trả về danh sách phim
 SRS --> FE: Trả về kết quả

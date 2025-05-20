@@ -20,8 +20,19 @@ spec:
         ports:
         - containerPort: 8001
         env:
-        - name: DATABASE_URL
-          value: "postgresql://admindb:admin123@movie-db.cohuqu6m26h2.us-east-1.rds.amazonaws.com:5432/movie_db"
+        - name: DATABASE_HOST
+          value: "movie-db.cohuqu6m26h2.us-east-1.rds.amazonaws.com"
+        - name: DATABASE_USER
+          value: "admindb"
+        - name: DATABASE_NAME
+          value: "movie_db"
+        - name: DATABASE_PORT
+          value: "5432"
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: contentvideo-secrets
+              key: DATABASE_PASSWORD
 ---
 apiVersion: v1
 kind: Service
