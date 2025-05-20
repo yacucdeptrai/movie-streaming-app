@@ -7,17 +7,17 @@ actor "Người dùng" as NguoiDung
 actor "Quản trị viên" as QuanTri
 actor "Nhà cung cấp nội dung" as NhaCungCap
 
-' Cân bằng tải
-[ELB]
+' Tầng giao tiếp Internet
+[ngrok]
+
+' Tầng cổng API
+package "Cổng API" {
+  [Kong Ingress Controller]
+}
 
 ' Tầng giao diện
 package "Giao diện" {
   [Web App]
-}
-
-' Tầng cổng API
-package "Cổng API" {
-  [Kong Gateway]
 }
 
 ' Tầng dịch vụ vi mô
@@ -29,7 +29,7 @@ package "Microservices" {
 
 ' Tầng lưu trữ dữ liệu
 package "Lưu trữ dữ liệu" {
-  [PostgreSQL]
+  [Amazon RDS PostgreSQL]
 }
 
 ' Tầng lưu trữ và xử lý
@@ -41,33 +41,33 @@ package "Storage & Processing" {
 
 ' === Mối quan hệ ===
 
-' Diễn viên đến ELB/Giao diện/Lưu trữ
-NguoiDung --> [ELB] : Gửi yêu cầu HTTPS
-QuanTri --> [ELB] : Quản lý nội dung (HTTPS)
-NhaCungCap --> [Amazon S3] : Tải video gốc (presigned URL)
-[ELB] --> [Kong Gateway] : Chuyển tiếp yêu cầu
+' Diễn viên đến ngrok/Giao diện/Lưu trữ
+NguoiDung --> [ngrok] : Gửi yêu cầu HTTPS (http://localhost:8080 hoặc URL ngrok)
+QuanTri --> [ngrok] : Quản lý nội dung (HTTPS)
+NhaCungCap --> [Amazon S3] : Tải video gốc (presigned URL, s3://movie-streaming-origin/{movie_id}/)
+[ngrok] --> [Kong Ingress Controller] : Chuyển tiếp yêu cầu
 
 ' Giao diện đến Cổng API
-[Web App] --> [Kong Gateway] : Gửi yêu cầu API (HTTPS)
+[Web App] --> [Kong Ingress Controller] : Gửi yêu cầu API (HTTPS)
 
 ' Cổng API đến Microservices
-[Kong Gateway] --> [Search Service] : Tìm phim (GET /search)
-[Kong Gateway] --> [Streaming Service] : Lấy URL video (GET /stream)
-[Kong Gateway] --> [ContentVideo Service] : Quản lý video & metadata (POST /content)
+[Kong Ingress Controller] --> [Search Service] : Tìm phim (GET /api/search)
+[Kong Ingress Controller] --> [Streaming Service] : Lấy URL video (GET /api/stream)
+[Kong Ingress Controller] --> [ContentVideo Service] : Quản lý video & metadata (POST /api/content)
 
 ' Microservices đến Storage/Processing
-[Search Service] --> [PostgreSQL] : Truy vấn metadata phim
-[Streaming Service] --> [AWS CloudFront] : Trả presigned URL
-[AWS CloudFront] --> [Amazon S3] : Lấy nội dung video
-[Web App] --> NguoiDung : Hiển thị URL video
+[Search Service] --> [Amazon RDS PostgreSQL] : Truy vấn metadata phim
+[Streaming Service] --> [AWS CloudFront] : Tạo presigned URL (s3://movie-streaming-dest/{movie_id}/hls/)
+[AWS CloudFront] --> [Amazon S3] : Lấy nội dung video (HLS)
+[Web App] --> NguoiDung : Hiển thị giao diện (danh sách phim, trình phát video)
 
-NguoiDung --> [AWS CloudFront] : Xem video (HTTPS)
+NguoiDung --> [AWS CloudFront] : Xem video với presigned URL (HTTPS)
 
 ' Xử lý nội dung
-[ContentVideo Service] --> [Amazon S3] : Kích hoạt tải video
-[ContentVideo Service] --> [AWS Elemental MediaConvert] : Mã hóa video (HLS/DASH)
-[AWS Elemental MediaConvert] --> [Amazon S3] : Lưu video đã mã hóa
-[ContentVideo Service] --> [PostgreSQL] : Lưu/Cập nhật metadata
-[QuanTri] --> [Web App] : Nhập metadata
+[ContentVideo Service] --> [Amazon S3] : Tải video gốc (s3://movie-streaming-origin/{movie_id}/)
+[ContentVideo Service] --> [AWS Elemental MediaConvert] : Mã hóa video (HLS, 1080p)
+[AWS Elemental MediaConvert] --> [Amazon S3] : Lưu video đã mã hóa (s3://movie-streaming-dest/{movie_id}/hls/)
+[ContentVideo Service] --> [Amazon RDS PostgreSQL] : Lưu/Cập nhật metadata
+[QuanTri] --> [Web App] : Kiểm tra trạng thái và nhập metadata
 
 @enduml
