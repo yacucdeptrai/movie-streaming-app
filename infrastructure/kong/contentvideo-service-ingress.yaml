@@ -17,3 +17,10 @@ spec:
             name: contentvideo-service
             port:
               number: 8003
+      - path: /api/content/upload
+        pathType: Prefix
+        backend:
+          service:
+            name: contentvideo-service
+            port:
+              number: 8003

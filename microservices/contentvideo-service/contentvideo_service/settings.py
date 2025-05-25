@@ -55,11 +55,11 @@ WSGI_APPLICATION = 'contentvideo_service.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'movie_db',
-        'USER': 'admindb',
-        'PASSWORD': 'admin123',
-        'HOST': os.getenv('DATABASE_HOST'),
-        'PORT': '5432',
+        'NAME': os.getenv('DATABASE_NAME', 'movie_db'),
+        'USER': os.getenv('DATABASE_USER', 'admindb'),
+        'PASSWORD': os.getenv('DATABASE_PASSWORD', 'admin123'),
+        'HOST': os.getenv('DATABASE_HOST', 'movie-db.cohuqu6m26h2.us-east-1.rds.amazonaws.com'),
+        'PORT': os.getenv('DATABASE_PORT', '5432'),
     }
 }
 
@@ -89,8 +89,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = ["http://localhost:8080", "http://localhost:5173"]
 
 # AWS Settings
-AWS_ACCESS_KEY_ID = os.getenv('AKIAREOSHZ2RIFE54GAH')
-AWS_SECRET_ACCESS_KEY = os.getenv('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')
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_REGION = 'us-east-1'
 AWS_S3_ORIGIN_BUCKET = 'movie-streaming-origin'
 AWS_S3_DEST_BUCKET = 'movie-streaming-dest'
