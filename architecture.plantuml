@@ -5,7 +5,6 @@ skinparam packageStyle rectangle
 
 actor "Người dùng" as NguoiDung
 actor "Quản trị viên" as QuanTri
-actor "Nhà cung cấp nội dung" as NhaCungCap
 
 ' Tầng giao tiếp Internet
 [ngrok]
@@ -41,10 +40,9 @@ package "Storage & Processing" {
 
 ' === Mối quan hệ ===
 
-' Diễn viên đến ngrok/Giao diện/Lưu trữ
+' Diễn viên đến ngrok/Giao diện
 NguoiDung --> [ngrok] : Gửi yêu cầu HTTPS (http://localhost:8080 hoặc URL ngrok)
-QuanTri --> [ngrok] : Quản lý nội dung (HTTPS)
-NhaCungCap --> [Amazon S3] : Tải video gốc (presigned URL, s3://movie-streaming-origin/{movie_id}/)
+QuanTri --> [ngrok] : Gọi API upload phim (HTTPS)
 [ngrok] --> [Kong Ingress Controller] : Chuyển tiếp yêu cầu
 
 ' Giao diện đến Cổng API
@@ -53,7 +51,7 @@ NhaCungCap --> [Amazon S3] : Tải video gốc (presigned URL, s3://movie-stream
 ' Cổng API đến Microservices
 [Kong Ingress Controller] --> [Search Service] : Tìm phim (GET /api/search)
 [Kong Ingress Controller] --> [Streaming Service] : Lấy URL video (GET /api/stream)
-[Kong Ingress Controller] --> [ContentVideo Service] : Quản lý video & metadata (POST /api/content)
+[Kong Ingress Controller] --> [ContentVideo Service] : Quản lý video & metadata (POST /api/content/upload)
 
 ' Microservices đến Storage/Processing
 [Search Service] --> [Amazon RDS PostgreSQL] : Truy vấn metadata phim
@@ -64,10 +62,9 @@ NhaCungCap --> [Amazon S3] : Tải video gốc (presigned URL, s3://movie-stream
 NguoiDung --> [AWS CloudFront] : Xem video với presigned URL (HTTPS)
 
 ' Xử lý nội dung
-[ContentVideo Service] --> [Amazon S3] : Tải video gốc (s3://movie-streaming-origin/{movie_id}/)
+[ContentVideo Service] --> [Amazon S3] : Tải video gốc (s3://movie-streaming-origin/{movie_id}/input/)
 [ContentVideo Service] --> [AWS Elemental MediaConvert] : Mã hóa video (HLS, 1080p)
 [AWS Elemental MediaConvert] --> [Amazon S3] : Lưu video đã mã hóa (s3://movie-streaming-dest/{movie_id}/hls/)
-[ContentVideo Service] --> [Amazon RDS PostgreSQL] : Lưu/Cập nhật metadata
-[QuanTri] --> [Web App] : Kiểm tra trạng thái và nhập metadata
+[ContentVideo Service] --> [Amazon RDS PostgreSQL] : Lưu metadata (title, description, genre, release_year)
 
 @enduml

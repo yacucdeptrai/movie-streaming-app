@@ -2,7 +2,6 @@
 !theme cerulean
 
 actor "Quản trị viên" as Admin
-participant "Web App" as FE
 boundary "ngrok" as ngrok
 boundary "Kong Ingress Controller" as KG
 control "ContentVideo Service" as CVS
@@ -11,8 +10,7 @@ participant "AWS Elemental MediaConvert" as MC
 database "Amazon RDS PostgreSQL" as PG
 
 ' Upload video và metadata
-Admin -> FE: Gửi video và metadata
-FE -> ngrok: POST /api/content/upload (HTTPS)
+Admin -> ngrok: POST /api/content/upload (HTTPS)
 ngrok -> KG: Chuyển yêu cầu
 KG -> CVS: Chuyển yêu cầu
 alt Định dạng multipart/form-data
@@ -22,8 +20,7 @@ alt Định dạng multipart/form-data
         MC -> S3: Lưu video mã hóa (s3://movie-streaming-dest/{movie_id}/hls/)
         S3 --> CVS: Xác nhận lưu
     else Video không hợp lệ
-        CVS --> FE: Báo lỗi
-        FE --> Admin: Hiển thị lỗi
+        CVS --> Admin: Báo lỗi
     end alt
 else Định dạng application/json
     note right: Chỉ lưu metadata, không upload file
@@ -32,12 +29,10 @@ end alt
 ' Lưu metadata vào RDS
 CVS -> PG: Lưu metadata (title, description, genre, release_year)
 PG --> CVS: Xác nhận lưu
-CVS --> FE: Xác nhận hoàn tất
-FE --> Admin: Hiển thị xác nhận
+CVS --> Admin: Xác nhận hoàn tất
 
 alt Metadata không hợp lệ
-    CVS --> FE: Báo lỗi
-    FE --> Admin: Hiển thị lỗi
+    CVS --> Admin: Báo lỗi
 end alt
 
 @enduml
