@@ -2,7 +2,7 @@
 
 ## 1. Giới Thiệu Hệ Thống
 
-Hệ thống trang web xem phim trực tuyến là một nền tảng phát trực tuyến video, cho phép người dùng xem phim qua trình duyệt web mà không cần đăng nhập hay xác thực. Hệ thống được thiết kế dựa trên kiến trúc microservices, tích hợp các dịch vụ của AWS như Amazon S3, AWS Elemental MediaConvert, và AWS CloudFront để quản lý và phân phối nội dung video. Nhà cung cấp nội dung có thể lưu trữ video trên Amazon S3, trong khi quản trị viên quản lý metadata phim thông qua API. Hệ thống được triển khai trên Kubernetes tích hợp trong Docker Desktop, sử dụng Kong Ingress Controller để định tuyến yêu cầu và ngrok để expose ra Internet.
+Hệ thống trang web xem phim trực tuyến là một nền tảng phát trực tuyến video, cho phép người dùng xem phim qua trình duyệt web mà không cần đăng nhập hay xác thực. Hệ thống được thiết kế dựa trên kiến trúc microservices, tích hợp các dịch vụ của AWS như Amazon S3, AWS Elemental MediaConvert, và AWS CloudFront để quản lý và phân phối nội dung video. Nhà cung cấp nội dung lưu trữ video trên Amazon S3, trong khi quản trị viên quản lý metadata phim thông qua API. Hệ thống được triển khai trên Kubernetes tích hợp trong Docker Desktop, sử dụng Kong Ingress Controller để định tuyến và ngrok để expose ra Internet. Code hệ thống đã được đẩy lên GitHub và triển khai thành công trên nhiều máy khác nhau.
 
 ### 1.1 Mục Tiêu
 - Cung cấp dịch vụ phát trực tuyến video chất lượng cao với định dạng HLS (1080p).
@@ -17,7 +17,7 @@ Hệ thống trang web xem phim trực tuyến là một nền tảng phát tr�
   - Kiến trúc microservices giúp hệ thống dễ mở rộng để đáp ứng tải lớn.
   - AWS CloudFront giảm độ trễ khi phát video, nâng cao hiệu suất.
   - Presigned URL bảo vệ nội dung, ngăn chặn truy cập trái phép.
-  - Triển khai trên Docker Desktop và Kubernetes thuận tiện cho phát triển và kiểm thử.
+  - Triển khai trên Docker Desktop và Kubernetes thuận tiện cho phát triển, kiểm thử, và triển khai trên nhiều máy.
 
 ## 2. Kiến Trúc Hệ Thống
 
@@ -77,14 +77,14 @@ Hệ thống được xây dựng dựa trên kiến trúc microservices, triể
 
 #### 2.2.4 Cơ Sở Dữ Liệu
 - **Amazon RDS PostgreSQL**:
-  - Lưu trữ metadata phim (tên, mô tả, thể loại, v.v.).
+  - Lưu trữ metadata phim (tên, mô tả, thể loại, năm phát hành, v.v.).
   - Endpoint: `movie-db.cohuqu6m26h2.us-east-1.rds.amazonaws.com`.
   - Database: `movie_db`.
   - User: `admindb`.
 
 #### 2.2.5 Lưu Trữ
 - **Amazon S3**:
-  - Bucket `movie-streaming-origin`: Lưu video gốc (`{movie_id}/`).
+  - Bucket `movie-streaming-origin`: Lưu video gốc (`{movie_id}/input/`).
   - Bucket `movie-streaming-dest`: Lưu video đã mã hóa (`{movie_id}/hls/`).
   - Quyền truy cập: Sử dụng AWS credentials (lưu trong Kubernetes Secrets).
 
@@ -106,27 +106,42 @@ Hệ thống được xây dựng dựa trên kiến trúc microservices, triể
   5. Frontend sử dụng presigned URL để phát video qua trình phát HLS từ CloudFront.
 - **Quản lý nội dung**:
   1. Quản trị viên gửi video qua API `POST /api/content/upload` đến `ContentVideo Service` thông qua Kong.
-  2. `ContentVideo Service` tải video lên S3 (`movie-streaming-origin/{movie_id}/`) và gọi AWS Elemental MediaConvert.
+  2. `ContentVideo Service` tải video lên S3 (`movie-streaming-origin/{movie_id}/input/`), gọi AWS Elemental MediaConvert.
   3. MediaConvert mã hóa video thành HLS (1080p) và lưu vào S3 (`movie-streaming-dest/{movie_id}/hls/`).
-  4. `ContentVideo Service` lưu metadata phim vào RDS PostgreSQL.
+  4. `ContentVideo Service` lưu metadata vào RDS PostgreSQL.
 
 ## 3. API Endpoints
 - **GET `/api/search?query={query}&page={page}&limit={limit}`**:
   - Tìm kiếm phim theo từ khóa, hỗ trợ phân trang.
-  - Ví dụ: `/api/search?query=avengers&page=1&limit=10`.
 - **GET `/api/stream/{movie_id}`**:
   - Lấy presigned URL để xem phim.
-  - Ví dụ: `/api/stream/123`.
 - **POST `/api/content/upload`**:
   - Tải video lên và lưu metadata.
-  - Payload: Form-data với file video và metadata (title, description, v.v.).
+  - **Hỗ trợ 2 định dạng**:
+    - **multipart/form-data**:
+      - Payload: Form-data với các trường:
+        - `video`: File video.
+        - `title`: Tiêu đề phim.
+        - `description`: Mô tả phim.
+        - `genre`: Thể loại phim (không bắt buộc).
+        - `release_year`: Năm phát hành (không bắt buộc).
+    - **application/json** (chỉ lưu metadata):
+      - Payload: JSON với các trường:
+        - `title`: Tiêu đề phim.
+        - `description`: Mô tả phim.
+        - `video_file`: Tên file video (không upload file thực tế).
+        - `genre`: Thể loại phim (không bắt buộc).
+        - `release_year`: Năm phát hành (không bắt buộc).
 
 ## 4. Kết Quả Đạt Được
-Hệ thống trang web xem phim trực tuyến đã được triển khai thành công trên Kubernetes tích hợp trong Docker Desktop, sử dụng Kong Ingress Controller để định tuyến và ngrok để expose ra Internet. Các tính năng chính đã hoạt động:
+Hệ thống trang web xem phim trực tuyến đã được triển khai thành công trên Kubernetes tích hợp trong Docker Desktop, sử dụng Kong Ingress Controller để định tuyến và ngrok để expose ra Internet. Code hệ thống đã được đẩy lên GitHub và triển khai trên nhiều máy khác nhau. Các tính năng chính đã hoạt động:
 - Người dùng có thể truy cập giao diện web, tìm kiếm phim, và xem phim trực tiếp qua trình phát HLS với chất lượng 1080p.
-- Quản trị viên có thể upload video qua API, video được mã hóa và lưu trữ trên Amazon S3, metadata được lưu vào RDS PostgreSQL.
+- Quản trị viên có thể upload video qua API `POST /api/content/upload`:
+  - Hỗ trợ `multipart/form-data` để upload file thực tế lên S3 và mã hóa bằng MediaConvert.
+  - Hỗ trợ `application/json` để lưu metadata mà không upload file.
+  - Metadata phim (bao gồm `title`, `description`, `genre`, `release_year`) được lưu vào RDS PostgreSQL.
 - Nội dung video được bảo vệ bằng presigned URL từ AWS CloudFront, đảm bảo ngăn chặn truy cập trái phép.
 - Hệ thống sử dụng kiến trúc microservices với các dịch vụ độc lập (`Search Service`, `Streaming Service`, `ContentVideo Service`), giao tiếp qua REST APIs (HTTPS).
 
 ## 5. Kết Luận
-Hệ thống trang web xem phim trực tuyến là một nền tảng microservices tích hợp AWS Elemental MediaConvert và AWS CloudFront để cung cấp dịch vụ phát video chất lượng cao. Người dùng có thể xem phim trực tiếp thông qua presigned URL, nhà cung cấp nội dung lưu trữ video trên Amazon S3, và quản trị viên quản lý nội dung qua API. Hệ thống đã được triển khai thành công trên môi trường cục bộ, đáp ứng các mục tiêu đề ra về phát trực tuyến, bảo mật, và quản lý nội dung. Các bước tiếp theo có thể bao gồm triển khai trên cloud (như AWS EKS) để hỗ trợ tải lớn và kiểm tra hiệu suất thực tế.
+Hệ thống trang web xem phim trực tuyến là một nền tảng microservices tích hợp AWS Elemental MediaConvert và AWS CloudFront để cung cấp dịch vụ phát video chất lượng cao. Người dùng có thể xem phim trực tiếp thông qua presigned URL, nhà cung cấp nội dung lưu trữ video trên Amazon S3, và quản trị viên quản lý nội dung qua API. Hệ thống đã được triển khai thành công trên môi trường cục bộ trên nhiều máy, với code được quản lý trên GitHub, đáp ứng các mục tiêu đề ra về phát trực tuyến, bảo mật, và quản lý nội dung. Các bước tiếp theo có thể bao gồm triển khai trên cloud (như AWS EKS) để hỗ trợ tải lớn và kiểm tra hiệu suất thực tế.

@@ -9,6 +9,8 @@ control "Streaming Service" as SS
 participant "AWS CloudFront" as CF
 participant "Amazon S3" as S3
 
+note left: Hệ thống triển khai trên nhiều máy, code quản lý trên GitHub
+
 User -> FE: Chọn phim
 FE -> ngrok: GET /api/stream/{movie_id} (HTTPS)
 ngrok -> KG: Chuyển yêu cầu
