@@ -1,0 +1,36 @@
+{
+  "Name": "MovieHLS_1080",
+  "Description": "HLS preset for 1080p output",
+  "Category": "HLS",
+  "Settings": {
+    "VideoDescription": {
+      "CodecSettings": {
+        "Codec": "H_264",
+        "H264Settings": {
+          "RateControlMode": "CBR",
+          "Bitrate": 6000000,
+          "FramerateControl": "INITIALIZE_FROM_SOURCE",
+          "SceneChangeDetect": "ENABLED"
+        }
+      },
+      "Width": 1920,
+      "Height": 1080
+    },
+    "AudioDescriptions": [
+      {
+        "CodecSettings": {
+          "Codec": "AAC",
+          "AacSettings": {
+            "Bitrate": 128000,
+            "CodingMode": "CODING_MODE_2_0",
+            "SampleRate": 48000
+          }
+        }
+      }
+    ],
+    "ContainerSettings": {
+      "Container": "M3U8",
+      "M3u8Settings": {}
+    }
+  }
+}

@@ -87,8 +87,16 @@ def upload_video(request):
                         "Name": "Apple HLS",
                         "Outputs": [
                             {
-                                "Preset": settings.AWS_MEDIACONVERT_TEMPLATE,
+                                "Preset": settings.AWS_MEDIACONVERT_TEMPLATE_1080,  # Preset cho 1080p
                                 "NameModifier": "_1080p"
+                            },
+                            {
+                                "Preset": settings.AWS_MEDIACONVERT_TEMPLATE_720,  # Preset cho 720p
+                                "NameModifier": "_720p"
+                            },
+                            {
+                                "Preset": settings.AWS_MEDIACONVERT_TEMPLATE_480,  # Preset cho 480p
+                                "NameModifier": "_480p"
                             }
                         ],
                         "OutputGroupSettings": {
