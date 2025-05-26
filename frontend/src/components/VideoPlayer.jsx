@@ -1,53 +1,61 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ArrowLeft, Settings, Wifi, WifiOff, ChevronDown } from "lucide-react"
+import { ArrowLeft, Settings, Wifi, ChevronDown, Monitor } from "lucide-react"
 import Hls from "hls.js"
 
 export default function VideoPlayer({ resolutions, onBack, movieTitle }) {
   const videoRef = useRef(null)
-  const [currentQuality, setCurrentQuality] = useState("auto")
-  const [availableQualities, setAvailableQualities] = useState([])
+  const [currentQuality, setCurrentQuality] = useState("720p")
   const [hls, setHls] = useState(null)
   const [error, setError] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showSettings, setShowSettings] = useState(false)
   const [bandwidth, setBandwidth] = useState(0)
-  const [networkSpeed, setNetworkSpeed] = useState("unknown")
+  const [networkSpeed, setNetworkSpeed] = useState("Unknown")
 
-  // Bandwidth thresholds for auto quality selection (in bits per second)
-  const qualityThresholds = {
-    "480p": 1500000, // 1.5 Mbps
-    "720p": 3000000, // 3 Mbps
-    "1080p": 6000000, // 6 Mbps
-  }
+  // Initialize with first available resolution if auto fails
+  useEffect(() => {
+    if (resolutions && resolutions.length > 0) {
+      // Try to find 720p, fallback to first available
+      const preferred = resolutions.find((r) => r.quality === "720p") || resolutions[0]
+      setCurrentQuality(preferred.quality)
+    }
+  }, [resolutions])
 
   // Detect network speed
   useEffect(() => {
     const detectNetworkSpeed = async () => {
-      if ("connection" in navigator) {
-        const connection = navigator.connection
-        const effectiveType = connection.effectiveType
-        const downlink = connection.downlink // Mbps
+      try {
+        if ("connection" in navigator) {
+          const connection = navigator.connection
+          const effectiveType = connection.effectiveType
+          const downlink = connection.downlink // Mbps
 
-        setBandwidth(downlink * 1000000) // Convert to bps
+          setBandwidth(downlink * 1000000) // Convert to bps
 
-        switch (effectiveType) {
-          case "slow-2g":
-            setNetworkSpeed("Very Slow")
-            break
-          case "2g":
-            setNetworkSpeed("Slow")
-            break
-          case "3g":
-            setNetworkSpeed("Medium")
-            break
-          case "4g":
-            setNetworkSpeed("Fast")
-            break
-          default:
-            setNetworkSpeed("Unknown")
+          switch (effectiveType) {
+            case "slow-2g":
+              setNetworkSpeed("Very Slow")
+              break
+            case "2g":
+              setNetworkSpeed("Slow")
+              break
+            case "3g":
+              setNetworkSpeed("Medium")
+              break
+            case "4g":
+              setNetworkSpeed("Fast")
+              break
+            default:
+              setNetworkSpeed("Good")
+          }
+        } else {
+          setNetworkSpeed("Good")
         }
+      } catch (error) {
+        console.log("Network detection not supported")
+        setNetworkSpeed("Good")
       }
     }
 
@@ -56,33 +64,20 @@ export default function VideoPlayer({ resolutions, onBack, movieTitle }) {
 
   // Auto select quality based on bandwidth
   const getAutoQuality = () => {
-    if (bandwidth === 0) return "720p" // Default fallback
+    if (!resolutions || resolutions.length === 0) return "720p"
 
-    if (bandwidth >= qualityThresholds["1080p"]) return "1080p"
-    if (bandwidth >= qualityThresholds["720p"]) return "720p"
-    return "480p"
+    if (bandwidth >= 6000000) {
+      return resolutions.find((r) => r.quality === "1080p")?.quality || "720p"
+    } else if (bandwidth >= 3000000) {
+      return resolutions.find((r) => r.quality === "720p")?.quality || "480p"
+    } else {
+      return resolutions.find((r) => r.quality === "480p")?.quality || resolutions[0]?.quality || "720p"
+    }
   }
-
-  // Setup available qualities
-  useEffect(() => {
-    const qualities = [
-      {
-        value: "auto",
-        label: `Auto (${networkSpeed})`,
-        icon: bandwidth > 0 ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />,
-      },
-      ...resolutions.map((res) => ({
-        value: res.quality,
-        label: res.quality,
-        icon: null,
-      })),
-    ]
-    setAvailableQualities(qualities)
-  }, [resolutions, networkSpeed, bandwidth])
 
   useEffect(() => {
     const video = videoRef.current
-    if (!video || resolutions.length === 0) return
+    if (!video || !resolutions || resolutions.length === 0) return
 
     const initializePlayer = () => {
       setIsLoading(true)
@@ -93,7 +88,7 @@ export default function VideoPlayer({ resolutions, onBack, movieTitle }) {
         hls.destroy()
       }
 
-      // Determine which quality to use
+      // Find the selected resolution
       let selectedQuality = currentQuality
       if (currentQuality === "auto") {
         selectedQuality = getAutoQuality()
@@ -101,40 +96,22 @@ export default function VideoPlayer({ resolutions, onBack, movieTitle }) {
 
       const selectedResolution = resolutions.find((res) => res.quality === selectedQuality)
       if (!selectedResolution) {
-        // Fallback to first available resolution
-        selectedQuality = resolutions[0].quality
-        setCurrentQuality(selectedQuality)
+        setError(`Không tìm thấy chất lượng ${selectedQuality}`)
         return
       }
+
+      console.log("Loading video:", selectedResolution.quality, selectedResolution.url)
 
       if (Hls.isSupported()) {
         const hlsInstance = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
-          // Adaptive bitrate settings
-          abrEwmaFastLive: 3.0,
-          abrEwmaSlowLive: 9.0,
-          abrMaxWithRealBitrate: false,
           maxBufferLength: 30,
           maxMaxBufferLength: 600,
         })
 
         hlsInstance.loadSource(selectedResolution.url)
         hlsInstance.attachMedia(video)
-
-        // Handle quality changes for auto mode
-        if (currentQuality === "auto") {
-          hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-            // Let HLS.js handle adaptive bitrate
-            hlsInstance.currentLevel = -1 // Auto mode
-          })
-
-          // Monitor bandwidth changes
-          hlsInstance.on(Hls.Events.FRAG_LOADED, (event, data) => {
-            const currentBandwidth = hlsInstance.bandwidthEstimate
-            setBandwidth(currentBandwidth)
-          })
-        }
 
         hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
           setIsLoading(false)
@@ -147,20 +124,8 @@ export default function VideoPlayer({ resolutions, onBack, movieTitle }) {
         hlsInstance.on(Hls.Events.ERROR, (event, data) => {
           console.error("HLS error:", event, data)
           if (data.fatal) {
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                setError("Lỗi mạng. Đang thử kết nối lại...")
-                hlsInstance.startLoad()
-                break
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                setError("Lỗi media. Đang thử khôi phục...")
-                hlsInstance.recoverMediaError()
-                break
-              default:
-                setError("Lỗi tải video. Vui lòng thử lại sau.")
-                setIsLoading(false)
-                break
-            }
+            setError("Lỗi tải video. Vui lòng thử lại sau.")
+            setIsLoading(false)
           }
         })
 
@@ -191,6 +156,7 @@ export default function VideoPlayer({ resolutions, onBack, movieTitle }) {
   }, [currentQuality, resolutions])
 
   const handleQualityChange = (quality) => {
+    console.log("Changing quality to:", quality)
     setCurrentQuality(quality)
     setShowSettings(false)
   }
@@ -212,75 +178,104 @@ export default function VideoPlayer({ resolutions, onBack, movieTitle }) {
     return currentQuality
   }
 
+  // Available qualities including auto
+  const availableQualities = [
+    {
+      value: "auto",
+      label: `Auto (${networkSpeed})`,
+      icon: <Wifi className="h-4 w-4" />,
+    },
+    ...(resolutions || []).map((res) => ({
+      value: res.quality,
+      label: res.quality,
+      icon: <Monitor className="h-4 w-4" />,
+    })),
+  ]
+
   return (
-    <div className="fixed inset-0 bg-black flex flex-col" style={{ zIndex: 9999 }}>
-      {/* Header Controls - Always Visible */}
-      <div className="absolute top-0 left-0 right-0 p-4 bg-black bg-opacity-80" style={{ zIndex: 10000 }}>
+    <div className="fixed inset-0 bg-black flex flex-col" style={{ zIndex: 50 }}>
+      {/* Top Control Bar - Always Visible */}
+      <div
+        className="absolute top-0 left-0 right-0 p-6 bg-gradient-to-b from-black via-black/80 to-transparent"
+        style={{ zIndex: 60 }}
+      >
         <div className="flex items-center justify-between">
           {/* Left Side - Back Button and Title */}
           <div className="flex items-center space-x-4">
             <button
               onClick={onBack}
-              className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded flex items-center"
+              className="flex items-center space-x-2 bg-gray-800/90 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-all duration-200 backdrop-blur-sm border border-gray-600"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Quay lại
+              <ArrowLeft className="h-5 w-5" />
+              <span className="font-medium">Quay lại</span>
             </button>
-            <h1 className="text-white font-semibold truncate max-w-md">{movieTitle}</h1>
+            <div className="text-white">
+              <h1 className="text-xl font-bold truncate max-w-md">{movieTitle}</h1>
+              <p className="text-sm text-gray-300">Đang phát ở chất lượng {getCurrentQualityLabel()}</p>
+            </div>
           </div>
 
-          {/* Right Side - Controls */}
+          {/* Right Side - Quality Controls */}
           <div className="flex items-center space-x-4">
-            {/* Network Info */}
-            <div className="text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded">
-              {bandwidth > 0 ? formatBandwidth(bandwidth) : networkSpeed}
+            {/* Network Info Badge */}
+            <div className="bg-blue-600/90 text-white text-sm px-3 py-2 rounded-lg backdrop-blur-sm">
+              <div className="flex items-center space-x-2">
+                <Wifi className="h-4 w-4" />
+                <span>{bandwidth > 0 ? formatBandwidth(bandwidth) : networkSpeed}</span>
+              </div>
             </div>
 
             {/* Quality Settings Button */}
             <div className="relative">
               <button
                 onClick={() => setShowSettings(!showSettings)}
-                className="flex items-center space-x-2 text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
+                className="flex items-center space-x-3 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-all duration-200 font-medium shadow-lg"
               >
-                <Settings className="h-4 w-4" />
-                <span className="text-sm font-medium">{getCurrentQualityLabel()}</span>
-                <ChevronDown className="h-3 w-3" />
+                <Settings className="h-5 w-5" />
+                <span>Chất lượng: {getCurrentQualityLabel()}</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${showSettings ? "rotate-180" : ""}`} />
               </button>
 
-              {/* Settings Dropdown */}
+              {/* Quality Dropdown */}
               {showSettings && (
                 <div
-                  className="absolute right-0 top-full mt-2 bg-black bg-opacity-95 backdrop-blur rounded-lg min-w-64 py-2 border border-gray-600"
-                  style={{ zIndex: 10001 }}
+                  className="absolute right-0 top-full mt-3 bg-gray-900/95 backdrop-blur-lg rounded-xl min-w-80 py-3 shadow-2xl border border-gray-700"
+                  style={{ zIndex: 70 }}
                 >
-                  <div className="px-4 py-2 text-white text-sm font-medium border-b border-gray-600">
+                  <div className="px-4 py-3 text-white text-lg font-bold border-b border-gray-700">
                     Chọn chất lượng video
                   </div>
 
-                  {availableQualities.map((quality) => (
-                    <button
-                      key={quality.value}
-                      onClick={() => handleQualityChange(quality.value)}
-                      className={`w-full flex items-center space-x-3 px-4 py-3 text-sm hover:bg-white hover:bg-opacity-10 transition-colors ${
-                        currentQuality === quality.value ? "text-blue-400 bg-white bg-opacity-5" : "text-white"
-                      }`}
-                    >
-                      {quality.icon && <span>{quality.icon}</span>}
-                      <span className="flex-1 text-left">{quality.label}</span>
-                      {currentQuality === quality.value && <span className="text-blue-400 font-bold">✓</span>}
-                    </button>
-                  ))}
+                  <div className="py-2">
+                    {availableQualities.map((quality) => (
+                      <button
+                        key={quality.value}
+                        onClick={() => handleQualityChange(quality.value)}
+                        className={`w-full flex items-center space-x-4 px-4 py-4 text-left hover:bg-gray-800/50 transition-colors ${
+                          currentQuality === quality.value
+                            ? "text-red-400 bg-red-900/20 border-l-4 border-red-400"
+                            : "text-white"
+                        }`}
+                      >
+                        <span className="text-gray-400">{quality.icon}</span>
+                        <span className="flex-1 text-lg">{quality.label}</span>
+                        {currentQuality === quality.value && <span className="text-red-400 font-bold text-xl">✓</span>}
+                      </button>
+                    ))}
+                  </div>
 
-                  {/* Bandwidth Info */}
-                  <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-600 mt-2">
-                    <div className="mb-1">
-                      Tốc độ mạng: <span className="text-white">{networkSpeed}</span>
+                  {/* Network Info Footer */}
+                  <div className="px-4 py-3 text-sm text-gray-400 border-t border-gray-700 bg-gray-800/30">
+                    <div className="flex justify-between items-center">
+                      <span>
+                        Tốc độ mạng: <span className="text-white font-medium">{networkSpeed}</span>
+                      </span>
+                      {bandwidth > 0 && (
+                        <span>
+                          Băng thông: <span className="text-white font-medium">{formatBandwidth(bandwidth)}</span>
+                        </span>
+                      )}
                     </div>
-                    {bandwidth > 0 && (
-                      <div>
-                        Băng thông hiện tại: <span className="text-white">{formatBandwidth(bandwidth)}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
@@ -289,21 +284,23 @@ export default function VideoPlayer({ resolutions, onBack, movieTitle }) {
         </div>
       </div>
 
-      {/* Video Player */}
+      {/* Video Player Container */}
       <div className="flex-1 flex items-center justify-center relative">
+        {/* Loading Overlay */}
         {isLoading && (
           <div
-            className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50"
-            style={{ zIndex: 9998 }}
+            className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+            style={{ zIndex: 55 }}
           >
-            <div className="text-white text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mx-auto mb-4"></div>
-              <p className="text-lg">Đang tải video...</p>
-              <p className="text-sm text-gray-400 mt-2">Chất lượng: {getCurrentQualityLabel()}</p>
+            <div className="text-white text-center bg-gray-900/90 p-8 rounded-xl border border-gray-700">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-red-500 mx-auto mb-6"></div>
+              <p className="text-xl font-medium mb-2">Đang tải video...</p>
+              <p className="text-gray-400">Chất lượng: {getCurrentQualityLabel()}</p>
             </div>
           </div>
         )}
 
+        {/* Video Element */}
         <video
           ref={videoRef}
           controls
@@ -314,23 +311,25 @@ export default function VideoPlayer({ resolutions, onBack, movieTitle }) {
           onCanPlay={() => setIsLoading(false)}
         />
 
+        {/* Error Overlay */}
         {error && (
           <div
-            className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80"
-            style={{ zIndex: 9998 }}
+            className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+            style={{ zIndex: 55 }}
           >
-            <div className="text-center text-white p-6 bg-gray-900 rounded-lg max-w-md border border-gray-600">
-              <p className="text-red-400 mb-4 text-lg">{error}</p>
-              <div className="space-y-2">
+            <div className="text-center text-white p-8 bg-gray-900/95 rounded-xl max-w-md border border-gray-700">
+              <div className="text-red-400 text-6xl mb-4">⚠️</div>
+              <p className="text-red-400 mb-6 text-lg font-medium">{error}</p>
+              <div className="space-y-3">
                 <button
                   onClick={() => window.location.reload()}
-                  className="btn btn-primary mr-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
+                  className="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
                 >
                   Thử lại
                 </button>
                 <button
                   onClick={() => handleQualityChange("480p")}
-                  className="btn btn-outline px-4 py-2 border border-gray-400 hover:bg-gray-700 rounded"
+                  className="w-full bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
                 >
                   Chuyển về 480p
                 </button>
@@ -340,10 +339,8 @@ export default function VideoPlayer({ resolutions, onBack, movieTitle }) {
         )}
       </div>
 
-      {/* Click outside to close settings */}
-      {showSettings && (
-        <div className="fixed inset-0" style={{ zIndex: 9999 }} onClick={() => setShowSettings(false)} />
-      )}
+      {/* Click Outside to Close Dropdown */}
+      {showSettings && <div className="fixed inset-0" style={{ zIndex: 65 }} onClick={() => setShowSettings(false)} />}
     </div>
   )
 }
