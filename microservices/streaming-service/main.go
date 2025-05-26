@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"log"
@@ -24,7 +25,7 @@ var (
 	distributionDomain = os.Getenv("DISTRIBUTION_DOMAIN")
 	privateKeyPath     = os.Getenv("PRIVATE_KEY_PATH")
 	keyPairId          = os.Getenv("KEY_PAIR_ID")
-	bucketName         = "movie-streaming-dest" // Thêm bucket name
+	bucketName         = "movie-streaming-dest"
 )
 
 // Kiểm tra biến môi trường
@@ -39,7 +40,6 @@ func init() {
 		log.Fatal("KEY_PAIR_ID environment variable is not set")
 	}
 
-	// Kiểm tra file private key tồn tại
 	if _, err := os.Stat(privateKeyPath); os.IsNotExist(err) {
 		log.Fatalf("Private key file does not exist at path: %s", privateKeyPath)
 	}
@@ -52,16 +52,13 @@ func loadPrivateKey(path string) (*rsa.PrivateKey, error) {
 		return nil, fmt.Errorf("failed to read private key file: %v", err)
 	}
 
-	// Decode PEM block
 	block, _ := pem.Decode(privateKeyBytes)
 	if block == nil {
 		return nil, fmt.Errorf("failed to decode PEM block containing private key")
 	}
 
-	// Parse private key
 	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
-		// Thử parse định dạng PKCS8 nếu PKCS1 thất bại
 		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse private key: %v", err)
@@ -97,7 +94,6 @@ func checkFileExists(key string) (bool, error) {
 
 // Tạo presigned URL từ CloudFront
 func getCloudFrontPresignedURL(key string) (string, error) {
-	// Kiểm tra file tồn tại trên S3
 	exists, err := checkFileExists(key)
 	if err != nil || !exists {
 		return "", fmt.Errorf("file %s does not exist on S3: %v", key, err)
@@ -108,14 +104,9 @@ func getCloudFrontPresignedURL(key string) (string, error) {
 		return "", fmt.Errorf("failed to load private key: %v", err)
 	}
 
-	// Tạo URL gốc
 	url := fmt.Sprintf("https://%s/%s", distributionDomain, key)
-
-	// Tạo signer
 	signer := sign.NewURLSigner(keyPairId, privateKey)
-
-	// Tạo presigned URL
-	signedURL, err := signer.Sign(url, time.Now().Add(3600*time.Second)) // Hiệu lực 1 giờ
+	signedURL, err := signer.Sign(url, time.Now().Add(3600*time.Second))
 	if err != nil {
 		return "", fmt.Errorf("failed to sign URL: %v", err)
 	}
@@ -123,7 +114,6 @@ func getCloudFrontPresignedURL(key string) (string, error) {
 	return signedURL, nil
 }
 
-// Handler cho API /api/stream/{movie_id}
 // Handler cho API /api/stream/{movie_id}
 func streamHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -149,34 +139,53 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Tìm file .m3u8
-	var key string
+	// Tìm tất cả file .m3u8 và tạo danh sách độ phân giải
+	type resolutionInfo struct {
+		Quality string `json:"quality"`
+		URL     string `json:"url"`
+	}
+	var resolutions []resolutionInfo
+	qualities := map[string]string{
+		"_1080p.m3u8": "1080p",
+		"_720p.m3u8":  "720p",
+		"_480p.m3u8":  "480p",
+	}
+
 	for _, obj := range resp.Contents {
 		if strings.HasSuffix(*obj.Key, ".m3u8") {
-			key = *obj.Key
-			break
+			for suffix, quality := range qualities {
+				if strings.HasSuffix(*obj.Key, suffix) {
+					signedURL, err := getCloudFrontPresignedURL(*obj.Key)
+					if err != nil {
+						log.Printf("Failed to get signed URL for %s: %v", *obj.Key, err)
+						continue
+					}
+					resolutions = append(resolutions, resolutionInfo{
+						Quality: quality,
+						URL:     signedURL,
+					})
+					break
+				}
+			}
 		}
 	}
-	if key == "" {
-		http.Error(w, "no .m3u8 file found in folder", http.StatusNotFound)
+
+	if len(resolutions) == 0 {
+		http.Error(w, "no .m3u8 files found in folder", http.StatusNotFound)
 		return
 	}
 
-	signedURL, err := getCloudFrontPresignedURL(key)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/plain")
-	fmt.Fprintf(w, signedURL)
+	// Trả về JSON chứa danh sách độ phân giải
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string][]resolutionInfo{
+		"resolutions": resolutions,
+	})
 }
 
 func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/api/stream/{movie_id}", streamHandler).Methods("GET")
 
-	// Thêm middleware CORS
 	corsHandler := handlers.CORS(
 		handlers.AllowedOrigins([]string{"http://localhost:8080", "http://localhost:5173"}),
 		handlers.AllowedMethods([]string{"GET", "OPTIONS"}),

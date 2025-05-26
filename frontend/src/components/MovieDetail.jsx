@@ -1,83 +1,190 @@
-import { useState } from 'react';
-import axios from 'axios';
-import VideoPlayer from './VideoPlayer';
+"use client"
 
-function MovieDetail({ movie, onBack }) {
-  const [videoUrl, setVideoUrl] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [isFullScreen, setIsFullScreen] = useState(false);
+import { useState } from "react"
+import { ArrowLeft, Play, Calendar, Tag, Loader2 } from "lucide-react"
+import VideoPlayer from "./VideoPlayer"
+import axios from "axios"
+
+export default function MovieDetail({ movie, onBack }) {
+  const [resolutions, setResolutions] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [isPlaying, setIsPlaying] = useState(false)
 
   const handlePlay = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await axios.get(`/api/stream/${movie.movie_id}`);
-      setVideoUrl(response.data);
-      setIsFullScreen(true);
-    } catch (err) {
-      setError('Không thể tải video. Vui lòng thử lại sau.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    setLoading(true)
+    setError(null)
 
-  const handleExitFullScreen = () => {
-    setIsFullScreen(false);
-  };
+    try {
+      // Use absolute path - Kong will route this
+      const response = await axios.get(`/api/stream/${movie.movie_id}`)
+      setResolutions(response.data.resolutions || [])
+      setIsPlaying(true)
+    } catch (err) {
+      console.error("Streaming API Error:", err)
+      setError("Không thể tải video. Vui lòng thử lại sau.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleBackToDetail = () => {
+    setIsPlaying(false)
+    setResolutions([])
+    setError(null)
+  }
+
+  if (isPlaying && resolutions.length > 0) {
+    return <VideoPlayer resolutions={resolutions} onBack={handleBackToDetail} movieTitle={movie.title} />
+  }
 
   return (
-    <div className="h-full w-full max-w-7xl flex flex-col">
-      {/* Video Player hoặc Thumbnail */}
-      {videoUrl && isFullScreen ? (
-        <VideoPlayer url={videoUrl} onBack={handleExitFullScreen} />
-      ) : (
-        <>
-          <div className="relative w-full h-96 sm:h-[50vh] lg:h-[70vh] bg-gray-700 flex items-center justify-center">
-            <img
-              src={movie.thumbnail || 'https://via.placeholder.com/1920x1080?text=No+Image'}
-              alt={movie.title}
-              className="w-full h-full object-cover"
-            />
-            <button
-              onClick={handlePlay}
-              disabled={loading}
-              className={`absolute px-8 py-4 bg-blue-600 text-white rounded-lg transition-colors flex items-center space-x-2
-                ${loading ? 'bg-gray-600' : 'hover:bg-blue-700'}`}
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
-                  <span>Đang tải...</span>
-                </>
-              ) : (
-                'Phát Video'
-              )}
-            </button>
-            {error && <p className="absolute bottom-4 text-red-500">{error}</p>}
-          </div>
+    <div className="min-h-screen bg-gray-900">
+      {/* Hero Section */}
+      <div style={{ position: "relative" }}>
+        {/* Background Image */}
+        <div style={{ position: "absolute", inset: "0", zIndex: "0" }}>
+          <img
+            src={movie.thumbnail || "/placeholder.svg?height=600&width=1200"}
+            alt={movie.title}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: "0",
+              background: "linear-gradient(to top, #111827, rgba(17, 24, 39, 0.8), rgba(17, 24, 39, 0.4))",
+            }}
+          />
+        </div>
 
-          {/* Thông tin phim */}
-          <div className="p-6 bg-gray-800 flex-1 overflow-y-auto">
-            <button
-              onClick={onBack}
-              className="mb-4 px-4 py-2 bg-gray-700 text-white rounded-lg transition-colors hover:bg-gray-600"
-            >
-              Quay Lại
-            </button>
+        {/* Content */}
+        <div style={{ position: "relative", zIndex: "10" }} className="container py-8">
+          {/* Back Button */}
+          <button onClick={onBack} className="btn btn-outline mb-6">
+            <ArrowLeft style={{ height: "1rem", width: "1rem", marginRight: "0.5rem" }} />
+            Quay lại
+          </button>
+
+          <div className="grid gap-6" style={{ gridTemplateColumns: "1fr 2fr", alignItems: "start" }}>
+            {/* Movie Poster */}
             <div>
-              <h2 className="text-3xl font-bold mb-3">{movie.title}</h2>
-              <p className="text-gray-400 mb-3">{movie.description}</p>
-              <div className="flex space-x-6 text-gray-300">
-                <p><strong>Thể loại:</strong> {movie.genre || 'Không có'}</p>
-                <p><strong>Năm sản xuất:</strong> {movie.release_year || 'Không có'}</p>
+              <div className="card" style={{ backgroundColor: "rgba(31, 41, 55, 0.8)", backdropFilter: "blur(4px)" }}>
+                <div className="aspect-poster relative">
+                  <img
+                    src={movie.thumbnail || "/placeholder.svg?height=600&width=400"}
+                    alt={movie.title}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Movie Info */}
+            <div className="space-y-4">
+              <div>
+                <h1 className="text-4xl font-bold mb-4 text-white">{movie.title}</h1>
+
+                <div className="flex items-center gap-3 mb-6" style={{ flexWrap: "wrap" }}>
+                  {movie.genre && (
+                    <span
+                      className="bg-blue-600 text-white px-3 py-1"
+                      style={{ borderRadius: "9999px", fontSize: "0.875rem", display: "flex", alignItems: "center" }}
+                    >
+                      <Tag style={{ height: "0.75rem", width: "0.75rem", marginRight: "0.25rem" }} />
+                      {movie.genre}
+                    </span>
+                  )}
+                  {movie.release_year && (
+                    <span
+                      style={{
+                        border: "1px solid #4b5563",
+                        color: "#d1d5db",
+                        padding: "0.25rem 0.75rem",
+                        borderRadius: "9999px",
+                        fontSize: "0.875rem",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Calendar style={{ height: "0.75rem", width: "0.75rem", marginRight: "0.25rem" }} />
+                      {movie.release_year}
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-gray-300 mb-8" style={{ fontSize: "1.125rem", lineHeight: "1.75" }}>
+                  {movie.description}
+                </p>
+
+                {/* Play Button */}
+                <div className="space-y-4">
+                  <button
+                    onClick={handlePlay}
+                    disabled={loading}
+                    className="btn btn-primary"
+                    style={{
+                      padding: "0.75rem 2rem",
+                      fontSize: "1.125rem",
+                      opacity: loading ? "0.5" : "1",
+                    }}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2
+                          style={{ height: "1.25rem", width: "1.25rem", marginRight: "0.5rem" }}
+                          className="animate-spin"
+                        />
+                        Đang tải...
+                      </>
+                    ) : (
+                      <>
+                        <Play style={{ height: "1.25rem", width: "1.25rem", marginRight: "0.5rem" }} />
+                        Xem phim
+                      </>
+                    )}
+                  </button>
+
+                  {error && <div style={{ color: "#ef4444", fontSize: "0.875rem" }}>{error}</div>}
+                </div>
               </div>
             </div>
           </div>
-        </>
-      )}
-    </div>
-  );
-}
+        </div>
+      </div>
 
-export default MovieDetail;
+      {/* Additional Info Section */}
+      <div className="container py-8">
+        <div className="card">
+          <div style={{ padding: "1.5rem" }}>
+            <h2 className="text-2xl font-bold mb-4">Thông tin chi tiết</h2>
+            <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
+              <div>
+                <h3 className="font-semibold text-gray-300 mb-2">Tên phim</h3>
+                <p className="text-white">{movie.title}</p>
+              </div>
+              {movie.genre && (
+                <div>
+                  <h3 className="font-semibold text-gray-300 mb-2">Thể loại</h3>
+                  <p className="text-white">{movie.genre}</p>
+                </div>
+              )}
+              {movie.release_year && (
+                <div>
+                  <h3 className="font-semibold text-gray-300 mb-2">Năm phát hành</h3>
+                  <p className="text-white">{movie.title}</p>
+                </div>
+              )}
+              <div style={{ gridColumn: "span 2" }}>
+                <h3 className="font-semibold text-gray-300 mb-2">Mô tả</h3>
+                <p className="text-white" style={{ lineHeight: "1.75" }}>
+                  {movie.description}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

@@ -3,6 +3,8 @@ kind: Ingress
 metadata:
   name: frontend-ingress
   namespace: default
+  annotations:
+    konghq.com/strip-path: "false"
 spec:
   ingressClassName: kong
   rules:

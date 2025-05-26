@@ -1,124 +1,249 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+"use client"
 
-function MovieList({ onSelectMovie }) {
-  const [movies, setMovies] = useState([]);
-  const [query, setQuery] = useState('');
-  const [page, setPage] = useState(1);
-  const [limit] = useState(3);
-  const [pagination, setPagination] = useState({ current_page: 1, total_pages: 1 });
-  const [loading, setLoading] = useState(false);
+import { useState, useEffect } from "react"
+import { Calendar, Star, Play, ChevronLeft, ChevronRight } from "lucide-react"
+import axios from "axios"
+
+export default function MovieList({ onSelectMovie, searchQuery, activeCategory }) {
+  const [movies, setMovies] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [error, setError] = useState(null)
+  const limit = 12
 
   const fetchMovies = async () => {
-    setLoading(true);
+    setLoading(true)
+    setError(null)
+
     try {
-      const response = await axios.get('/api/search', {
-        params: { query: query || undefined, page, limit }
-      });
-      setMovies(response.data.movies);
-      setPagination(response.data.pagination);
-    } catch (error) {
-      console.error('Error fetching movies:', error);
-      setMovies([]);
+      const params = {
+        page: page.toString(),
+        limit: limit.toString(),
+      }
+
+      if (searchQuery) {
+        params.query = searchQuery
+      }
+
+      // Use absolute path - Kong will route this
+      const response = await axios.get("/api/search", { params })
+      setMovies(response.data.movies || [])
+      setTotalPages(response.data.pagination?.total_pages || 1)
+    } catch (err) {
+      console.error("API Error:", err)
+      setError("Không thể tải danh sách phim. Vui lòng thử lại sau.")
+      setMovies([])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   useEffect(() => {
-    fetchMovies();
-  }, [query, page]);
+    fetchMovies()
+  }, [searchQuery, activeCategory, page])
 
-  const handleSearch = (e) => {
-    setQuery(e.target.value);
-    setPage(1);
-  };
+  useEffect(() => {
+    setPage(1) // Reset to first page when search or category changes
+  }, [searchQuery, activeCategory])
 
   const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= pagination.total_pages) {
-      setPage(newPage);
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage)
+      window.scrollTo({ top: 0, behavior: "smooth" })
     }
-  };
+  }
+
+  const MovieSkeleton = () => (
+    <div className="card animate-spin">
+      <div style={{ width: "100%", height: "16rem", backgroundColor: "#374151" }}></div>
+      <div style={{ padding: "1rem" }}>
+        <div
+          style={{
+            height: "1.5rem",
+            width: "75%",
+            marginBottom: "0.5rem",
+            backgroundColor: "#374151",
+            borderRadius: "0.25rem",
+          }}
+        ></div>
+        <div
+          style={{
+            height: "1rem",
+            width: "100%",
+            marginBottom: "0.5rem",
+            backgroundColor: "#374151",
+            borderRadius: "0.25rem",
+          }}
+        ></div>
+        <div style={{ height: "1rem", width: "50%", backgroundColor: "#374151", borderRadius: "0.25rem" }}></div>
+      </div>
+    </div>
+  )
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <div style={{ color: "#ef4444", marginBottom: "1rem" }}>{error}</div>
+        <button onClick={fetchMovies} className="btn btn-outline">
+          Thử lại
+        </button>
+      </div>
+    )
+  }
 
   return (
-    <div className="h-full w-full max-w-7xl flex flex-col">
-      {/* Thanh tìm kiếm */}
-      <div className="p-4 bg-gray-800 shadow-lg">
-        <h2 className="text-3xl font-bold mb-4 text-center">Danh Sách Phim</h2>
-        <input
-          type="text"
-          placeholder="Tìm kiếm phim..."
-          value={query}
-          onChange={handleSearch}
-          className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
-        />
-      </div>
-
-      {/* Danh sách phim */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {loading ? (
-          <div className="flex justify-center items-center h-full">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-          </div>
-        ) : movies.length === 0 ? (
-          <p className="text-gray-400 text-center h-full flex items-center justify-center">Không có phim nào để hiển thị.</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {movies.map((movie) => (
-              <div
-                key={movie.movie_id}
-                className="bg-gray-800 rounded-lg overflow-hidden shadow-lg transition-all duration-300 cursor-pointer hover:shadow-xl hover:scale-105"
-                onClick={() => onSelectMovie(movie)}
-              >
-                {/* Thumbnail */}
-                <div className="w-full h-48 bg-gray-700 flex items-center justify-center">
-                  <img
-                    src={movie.thumbnail || 'https://via.placeholder.com/300x200?text=No+Image'}
-                    alt={movie.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                {/* Thông tin phim */}
-                <div className="p-4">
-                  <h3 className="text-xl font-semibold truncate">{movie.title}</h3>
-                  <p className="text-gray-400 text-sm mt-1 line-clamp-2">{movie.description}</p>
-                  <div className="mt-2 flex justify-between text-gray-500 text-sm">
-                    <span>{movie.genre || 'Không có'}</span>
-                    <span>{movie.release_year || 'N/A'}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">{searchQuery ? `Kết quả tìm kiếm: "${searchQuery}"` : "Danh sách phim"}</h2>
+        {!loading && movies.length > 0 && (
+          <div style={{ fontSize: "0.875rem", color: "#9ca3af" }}>
+            Trang {page} / {totalPages} ({movies.length} phim)
           </div>
         )}
       </div>
 
-      {/* Phân trang */}
-      {!loading && movies.length > 0 && (
-        <div className="p-4 bg-gray-800 shadow-lg">
-          <div className="flex justify-center space-x-3">
-            <button
-              onClick={() => handlePageChange(page - 1)}
-              disabled={page === 1}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors disabled:bg-gray-600 hover:bg-blue-700"
-            >
-              Trước
-            </button>
-            <span className="px-4 py-2 text-gray-300">
-              Trang {pagination.current_page} / {pagination.total_pages}
-            </span>
-            <button
-              onClick={() => handlePageChange(page + 1)}
-              disabled={page === pagination.total_pages}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors disabled:bg-gray-600 hover:bg-blue-700"
-            >
-              Sau
-            </button>
+      {/* Movies Grid */}
+      {loading ? (
+        <div className="grid grid-cols-1 gap-6">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <MovieSkeleton key={index} />
+          ))}
+        </div>
+      ) : movies.length === 0 ? (
+        <div className="text-center py-8">
+          <div style={{ color: "#9ca3af", marginBottom: "1rem" }}>
+            {searchQuery ? "Không tìm thấy phim nào phù hợp" : "Không có phim nào để hiển thị"}
           </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6">
+          {movies.map((movie) => (
+            <div
+              key={movie.movie_id}
+              className="card cursor-pointer"
+              onClick={() => onSelectMovie(movie)}
+              style={{ transition: "all 0.3s" }}
+            >
+              {/* Movie Poster */}
+              <div className="relative aspect-poster overflow-hidden">
+                <img
+                  src={movie.thumbnail || "/placeholder.svg?height=400&width=300"}
+                  alt={movie.title}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: "0",
+                    backgroundColor: "rgba(0,0,0,0)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.3s",
+                  }}
+                >
+                  <Play style={{ color: "white", opacity: "0", width: "3rem", height: "3rem" }} />
+                </div>
+                {movie.release_year && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: "0.5rem",
+                      right: "0.5rem",
+                      backgroundColor: "#2563eb",
+                      color: "white",
+                      padding: "0.25rem 0.5rem",
+                      borderRadius: "0.25rem",
+                      fontSize: "0.75rem",
+                    }}
+                  >
+                    {movie.release_year}
+                  </span>
+                )}
+              </div>
+
+              {/* Movie Info */}
+              <div style={{ padding: "1rem" }}>
+                <h3 className="font-semibold text-xl mb-2 line-clamp-2" style={{ color: "#60a5fa" }}>
+                  {movie.title}
+                </h3>
+                <p className="text-gray-400 mb-3 line-clamp-2" style={{ fontSize: "0.875rem" }}>
+                  {movie.description}
+                </p>
+                <div className="flex items-center justify-between" style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                  {movie.genre && (
+                    <div className="flex items-center space-x-1">
+                      <Star style={{ height: "0.75rem", width: "0.75rem" }} />
+                      <span>{movie.genre}</span>
+                    </div>
+                  )}
+                  {movie.release_year && (
+                    <div className="flex items-center space-x-1">
+                      <Calendar style={{ height: "0.75rem", width: "0.75rem" }} />
+                      <span>{movie.release_year}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && movies.length > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-center space-x-2" style={{ paddingTop: "2rem" }}>
+          <button
+            onClick={() => handlePageChange(page - 1)}
+            disabled={page === 1}
+            className="btn btn-outline"
+            style={{ opacity: page === 1 ? "0.5" : "1", cursor: page === 1 ? "not-allowed" : "pointer" }}
+          >
+            <ChevronLeft style={{ height: "1rem", width: "1rem", marginRight: "0.25rem" }} />
+            Trước
+          </button>
+
+          <div className="flex items-center space-x-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum
+              if (totalPages <= 5) {
+                pageNum = i + 1
+              } else if (page <= 3) {
+                pageNum = i + 1
+              } else if (page >= totalPages - 2) {
+                pageNum = totalPages - 4 + i
+              } else {
+                pageNum = page - 2 + i
+              }
+
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => handlePageChange(pageNum)}
+                  className={`btn ${page === pageNum ? "btn-primary" : "btn-outline"}`}
+                >
+                  {pageNum}
+                </button>
+              )
+            })}
+          </div>
+
+          <button
+            onClick={() => handlePageChange(page + 1)}
+            disabled={page === totalPages}
+            className="btn btn-outline"
+            style={{
+              opacity: page === totalPages ? "0.5" : "1",
+              cursor: page === totalPages ? "not-allowed" : "pointer",
+            }}
+          >
+            Sau
+            <ChevronRight style={{ height: "1rem", width: "1rem", marginLeft: "0.25rem" }} />
+          </button>
         </div>
       )}
     </div>
-  );
+  )
 }
-
-export default MovieList;
