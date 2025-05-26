@@ -1,22 +1,35 @@
 "use client"
 
 import { useState } from "react"
-import { Search, Film, Menu, X } from "lucide-react"
+import { Link, useNavigate, useLocation } from "react-router-dom"
+import { Search, Film, Menu, X, Home, Grid, Star } from "lucide-react"
 
-export default function Header({ onSearch, activeCategory, onCategoryChange }) {
+export default function Header() {
   const [searchInput, setSearchInput] = useState("")
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const navigate = useNavigate()
+  const location = useLocation()
 
   const categories = [
-    { id: "all", label: "Tất cả" },
-    { id: "phim-le", label: "Phim lẻ" },
-    { id: "phim-bo", label: "Phim bộ" },
-    { id: "chieu-rap", label: "Phim chiếu rạp" },
+    { id: "all", label: "Tất cả", path: "/", icon: <Home className="h-4 w-4" /> },
+    { id: "phim-le", label: "Phim lẻ", path: "/category/phim-le", icon: <Film className="h-4 w-4" /> },
+    { id: "phim-bo", label: "Phim bộ", path: "/category/phim-bo", icon: <Grid className="h-4 w-4" /> },
+    { id: "chieu-rap", label: "Phim chiếu rạp", path: "/category/chieu-rap", icon: <Star className="h-4 w-4" /> },
   ]
 
   const handleSearchSubmit = (e) => {
     e.preventDefault()
-    onSearch(searchInput)
+    if (searchInput.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchInput.trim())}`)
+      setSearchInput("")
+    }
+  }
+
+  const isActivePath = (path) => {
+    if (path === "/") {
+      return location.pathname === "/"
+    }
+    return location.pathname.startsWith(path)
   }
 
   return (
@@ -25,12 +38,12 @@ export default function Header({ onSearch, activeCategory, onCategoryChange }) {
         {/* Main header */}
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
             <Film className="h-8 w-8 text-blue-500" />
             <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
               So Thanh Tra
             </h1>
-          </div>
+          </Link>
 
           {/* Desktop Search */}
           <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center space-x-2 flex-1 max-w-md mx-8">
@@ -41,10 +54,13 @@ export default function Header({ onSearch, activeCategory, onCategoryChange }) {
                 placeholder="Tìm kiếm phim..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                className="input pl-10"
+                className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            <button type="submit" className="btn btn-primary">
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            >
               Tìm
             </button>
           </form>
@@ -61,13 +77,18 @@ export default function Header({ onSearch, activeCategory, onCategoryChange }) {
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-1 pb-4">
           {categories.map((category) => (
-            <button
+            <Link
               key={category.id}
-              onClick={() => onCategoryChange(category.id)}
-              className={`btn ${activeCategory === category.id ? "btn-primary" : "btn-outline"}`}
+              to={category.path}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                isActivePath(category.path)
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-300 hover:bg-gray-700 hover:text-white"
+              }`}
             >
-              {category.label}
-            </button>
+              {category.icon}
+              <span>{category.label}</span>
+            </Link>
           ))}
         </nav>
 
@@ -83,7 +104,7 @@ export default function Header({ onSearch, activeCategory, onCategoryChange }) {
                   placeholder="Tìm kiếm phim..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  className="input pl-10"
+                  className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </form>
@@ -91,16 +112,19 @@ export default function Header({ onSearch, activeCategory, onCategoryChange }) {
             {/* Mobile Navigation */}
             <nav className="grid grid-cols-2 gap-2">
               {categories.map((category) => (
-                <button
+                <Link
                   key={category.id}
-                  onClick={() => {
-                    onCategoryChange(category.id)
-                    setIsMobileMenuOpen(false)
-                  }}
-                  className={`btn ${activeCategory === category.id ? "btn-primary" : "btn-outline"}`}
+                  to={category.path}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-colors ${
+                    isActivePath(category.path)
+                      ? "bg-blue-600 text-white"
+                      : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                  }`}
                 >
-                  {category.label}
-                </button>
+                  {category.icon}
+                  <span>{category.label}</span>
+                </Link>
               ))}
             </nav>
           </div>

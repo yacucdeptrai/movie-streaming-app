@@ -1,50 +1,27 @@
-"use client"
-
-import { useState } from "react"
-import MovieList from "./components/MovieList"
-import MovieDetail from "./components/MovieDetail"
-import Header from "./components/Header"
-import Footer from "./components/Footer"
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
+import Layout from "./components/Layout"
+import HomePage from "./pages/HomePage"
+import MovieDetailPage from "./pages/MovieDetailPage"
+import VideoPlayerPage from "./pages/VideoPlayerPage"
+import SearchPage from "./pages/SearchPage"
+import CategoryPage from "./pages/CategoryPage"
+import NotFoundPage from "./pages/NotFoundPage"
 
 function App() {
-  const [selectedMovie, setSelectedMovie] = useState(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [activeCategory, setActiveCategory] = useState("all")
-
-  const handleSelectMovie = (movie) => {
-    setSelectedMovie(movie)
-  }
-
-  const handleBack = () => {
-    setSelectedMovie(null)
-  }
-
-  const handleSearch = (query) => {
-    setSearchQuery(query)
-    setActiveCategory("all")
-  }
-
-  const handleCategoryChange = (category) => {
-    setActiveCategory(category)
-    setSearchQuery("")
-  }
-
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <Header onSearch={handleSearch} activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
-
-      <main className="flex-1">
-        {selectedMovie ? (
-          <MovieDetail movie={selectedMovie} onBack={handleBack} />
-        ) : (
-          <div className="container mx-auto px-4 py-8">
-            <MovieList onSelectMovie={handleSelectMovie} searchQuery={searchQuery} activeCategory={activeCategory} />
-          </div>
-        )}
-      </main>
-
-      <Footer />
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<HomePage />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/category/:categoryId" element={<CategoryPage />} />
+          <Route path="/movie/:movieId" element={<MovieDetailPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+        {/* Video player on separate route without layout */}
+        <Route path="/watch/:movieId" element={<VideoPlayerPage />} />
+      </Routes>
+    </Router>
   )
 }
 
