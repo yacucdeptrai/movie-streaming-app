@@ -5,6 +5,7 @@ metadata:
   namespace: default
   annotations:
     konghq.com/strip-path: "false"
+    konghq.com/preserve-host: "true"
 spec:
   ingressClassName: kong
   rules:

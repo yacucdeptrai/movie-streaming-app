@@ -1,190 +1,251 @@
 "use client"
 
 import { useState } from "react"
-import { ArrowLeft, Play, Calendar, Tag, Loader2 } from "lucide-react"
-import VideoPlayer from "./VideoPlayer"
 import axios from "axios"
+import VideoPlayer from "./VideoPlayer"
 
-export default function MovieDetail({ movie, onBack }) {
-  const [resolutions, setResolutions] = useState([])
+function MovieDetail({ movie, onBack }) {
+  const [resolutions, setResolutions] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [isPlaying, setIsPlaying] = useState(false)
+  const [isFullScreen, setIsFullScreen] = useState(false)
 
   const handlePlay = async () => {
     setLoading(true)
     setError(null)
-
     try {
-      // Use absolute path - Kong will route this
       const response = await axios.get(`/api/stream/${movie.movie_id}`)
-      setResolutions(response.data.resolutions || [])
-      setIsPlaying(true)
+
+      const data = response.data
+      if (data.resolutions && data.resolutions.length > 0) {
+        setResolutions(data.resolutions)
+        setIsFullScreen(true)
+      } else {
+        setError("Không có video khả dụng cho phim này.")
+      }
     } catch (err) {
       console.error("Streaming API Error:", err)
-      setError("Không thể tải video. Vui lòng thử lại sau.")
+      if (err.response?.status === 404) {
+        setError("Video chưa được xử lý hoặc không tồn tại.")
+      } else {
+        setError("Không thể tải video. Vui lòng thử lại sau.")
+      }
     } finally {
       setLoading(false)
     }
   }
 
-  const handleBackToDetail = () => {
-    setIsPlaying(false)
-    setResolutions([])
-    setError(null)
+  const handleExitFullScreen = () => {
+    setIsFullScreen(false)
+    setResolutions(null)
   }
 
-  if (isPlaying && resolutions.length > 0) {
-    return <VideoPlayer resolutions={resolutions} onBack={handleBackToDetail} movieTitle={movie.title} />
+  if (resolutions && isFullScreen) {
+    return <VideoPlayer resolutions={resolutions} onBack={handleExitFullScreen} movieTitle={movie.title} />
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      {/* Hero Section */}
-      <div style={{ position: "relative" }}>
-        {/* Background Image */}
-        <div style={{ position: "absolute", inset: "0", zIndex: "0" }}>
-          <img
-            src={movie.thumbnail || "/placeholder.svg?height=600&width=1200"}
-            alt={movie.title}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              inset: "0",
-              background: "linear-gradient(to top, #111827, rgba(17, 24, 39, 0.8), rgba(17, 24, 39, 0.4))",
-            }}
-          />
-        </div>
+    <div className="movie-detail">
+      {/* Movie Poster & Play Button */}
+      <div className="movie-detail-poster">
+        <img
+          src={movie.thumbnail || `https://picsum.photos/400/600?random=${movie.movie_id}`}
+          alt={movie.title}
+          onError={(e) => {
+            e.target.style.display = "none"
+            e.target.parentElement.innerHTML =
+              '<div style="display: flex; align-items: center; justify-content: center; height: 400px; background: #333; border-radius: 12px; color: #888; font-size: 4rem;">🎬</div>'
+          }}
+        />
 
-        {/* Content */}
-        <div style={{ position: "relative", zIndex: "10" }} className="container py-8">
-          {/* Back Button */}
-          <button onClick={onBack} className="btn btn-outline mb-6">
-            <ArrowLeft style={{ height: "1rem", width: "1rem", marginRight: "0.5rem" }} />
-            Quay lại
-          </button>
+        {/* Play Button */}
+        <button onClick={handlePlay} disabled={loading} className="play-button">
+          {loading ? (
+            <div
+              className="spinner"
+              style={{
+                width: "30px",
+                height: "30px",
+                border: "3px solid rgba(255,255,255,0.3)",
+                borderTop: "3px solid white",
+              }}
+            ></div>
+          ) : (
+            <div className="icon icon-play" style={{ fontSize: "2rem" }}></div>
+          )}
+        </button>
 
-          <div className="grid gap-6" style={{ gridTemplateColumns: "1fr 2fr", alignItems: "start" }}>
-            {/* Movie Poster */}
-            <div>
-              <div className="card" style={{ backgroundColor: "rgba(31, 41, 55, 0.8)", backdropFilter: "blur(4px)" }}>
-                <div className="aspect-poster relative">
-                  <img
-                    src={movie.thumbnail || "/placeholder.svg?height=600&width=400"}
-                    alt={movie.title}
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Movie Info */}
-            <div className="space-y-4">
-              <div>
-                <h1 className="text-4xl font-bold mb-4 text-white">{movie.title}</h1>
-
-                <div className="flex items-center gap-3 mb-6" style={{ flexWrap: "wrap" }}>
-                  {movie.genre && (
-                    <span
-                      className="bg-blue-600 text-white px-3 py-1"
-                      style={{ borderRadius: "9999px", fontSize: "0.875rem", display: "flex", alignItems: "center" }}
-                    >
-                      <Tag style={{ height: "0.75rem", width: "0.75rem", marginRight: "0.25rem" }} />
-                      {movie.genre}
-                    </span>
-                  )}
-                  {movie.release_year && (
-                    <span
-                      style={{
-                        border: "1px solid #4b5563",
-                        color: "#d1d5db",
-                        padding: "0.25rem 0.75rem",
-                        borderRadius: "9999px",
-                        fontSize: "0.875rem",
-                        display: "flex",
-                        alignItems: "center",
-                      }}
-                    >
-                      <Calendar style={{ height: "0.75rem", width: "0.75rem", marginRight: "0.25rem" }} />
-                      {movie.release_year}
-                    </span>
-                  )}
-                </div>
-
-                <p className="text-gray-300 mb-8" style={{ fontSize: "1.125rem", lineHeight: "1.75" }}>
-                  {movie.description}
-                </p>
-
-                {/* Play Button */}
-                <div className="space-y-4">
-                  <button
-                    onClick={handlePlay}
-                    disabled={loading}
-                    className="btn btn-primary"
-                    style={{
-                      padding: "0.75rem 2rem",
-                      fontSize: "1.125rem",
-                      opacity: loading ? "0.5" : "1",
-                    }}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2
-                          style={{ height: "1.25rem", width: "1.25rem", marginRight: "0.5rem" }}
-                          className="animate-spin"
-                        />
-                        Đang tải...
-                      </>
-                    ) : (
-                      <>
-                        <Play style={{ height: "1.25rem", width: "1.25rem", marginRight: "0.5rem" }} />
-                        Xem phim
-                      </>
-                    )}
-                  </button>
-
-                  {error && <div style={{ color: "#ef4444", fontSize: "0.875rem" }}>{error}</div>}
-                </div>
-              </div>
-            </div>
+        {error && (
+          <div className="error" style={{ marginTop: "1rem" }}>
+            <p className="error-text">{error}</p>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Additional Info Section */}
-      <div className="container py-8">
-        <div className="card">
-          <div style={{ padding: "1.5rem" }}>
-            <h2 className="text-2xl font-bold mb-4">Thông tin chi tiết</h2>
-            <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
-              <div>
-                <h3 className="font-semibold text-gray-300 mb-2">Tên phim</h3>
-                <p className="text-white">{movie.title}</p>
+      {/* Movie Information */}
+      <div className="movie-detail-info">
+        <h1>{movie.title}</h1>
+
+        <div className="movie-meta">
+          {movie.release_year && (
+            <div className="meta-item">
+              <span className="icon icon-calendar meta-icon"></span>
+              <span>{movie.release_year}</span>
+            </div>
+          )}
+
+          {movie.genre && (
+            <div className="meta-item">
+              <span className="icon icon-tag meta-icon"></span>
+              <span
+                style={{
+                  background: "rgba(255, 107, 107, 0.2)",
+                  color: "#ff6b6b",
+                  padding: "0.25rem 0.5rem",
+                  borderRadius: "4px",
+                  fontSize: "0.875rem",
+                }}
+              >
+                {movie.genre}
+              </span>
+            </div>
+          )}
+
+          <div className="meta-item">
+            <span className="icon icon-star meta-icon"></span>
+            <span style={{ color: "#ffd700", fontWeight: "bold" }}>8.5</span>
+            <span style={{ color: "#888" }}>(1,234 đánh giá)</span>
+          </div>
+        </div>
+
+        <div className="movie-detail-description">
+          <h2 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1rem" }}>Nội dung phim</h2>
+          <p>{movie.description || "Chưa có mô tả cho bộ phim này."}</p>
+        </div>
+
+        {/* Additional Info */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+            gap: "2rem",
+            marginTop: "2rem",
+          }}
+        >
+          <div>
+            <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>Thông tin chi tiết</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#b8b8b8" }}>Thể loại:</span>
+                <span>{movie.genre || "Chưa cập nhật"}</span>
               </div>
-              {movie.genre && (
-                <div>
-                  <h3 className="font-semibold text-gray-300 mb-2">Thể loại</h3>
-                  <p className="text-white">{movie.genre}</p>
-                </div>
-              )}
-              {movie.release_year && (
-                <div>
-                  <h3 className="font-semibold text-gray-300 mb-2">Năm phát hành</h3>
-                  <p className="text-white">{movie.title}</p>
-                </div>
-              )}
-              <div style={{ gridColumn: "span 2" }}>
-                <h3 className="font-semibold text-gray-300 mb-2">Mô tả</h3>
-                <p className="text-white" style={{ lineHeight: "1.75" }}>
-                  {movie.description}
-                </p>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#b8b8b8" }}>Năm sản xuất:</span>
+                <span>{movie.release_year || "Chưa cập nhật"}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#b8b8b8" }}>Chất lượng:</span>
+                <span style={{ color: "#4ade80" }}>HD</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#b8b8b8" }}>Ngôn ngữ:</span>
+                <span>Tiếng Việt</span>
               </div>
             </div>
           </div>
+
+          <div>
+            <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>Tính năng</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <span style={{ color: "#4ade80" }}>✓</span>
+                <span style={{ color: "#b8b8b8" }}>Phát trực tuyến HD</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <span style={{ color: "#4ade80" }}>✓</span>
+                <span style={{ color: "#b8b8b8" }}>Nhiều chất lượng</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <span style={{ color: "#4ade80" }}>✓</span>
+                <span style={{ color: "#b8b8b8" }}>Tương thích mọi thiết bị</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display: "flex", gap: "1rem", marginTop: "2rem", flexWrap: "wrap" }}>
+          <button
+            onClick={handlePlay}
+            disabled={loading}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              background: "#ff6b6b",
+              border: "none",
+              color: "white",
+              padding: "1rem 2rem",
+              borderRadius: "12px",
+              fontWeight: "600",
+              cursor: "pointer",
+              transition: "all 0.2s",
+              fontSize: "1rem",
+            }}
+            onMouseOver={(e) => (e.target.style.background = "#ee5a24")}
+            onMouseOut={(e) => (e.target.style.background = "#ff6b6b")}
+          >
+            <span className="icon icon-play"></span>
+            <span>{loading ? "Đang tải..." : "Xem ngay"}</span>
+          </button>
+
+          <button
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              background: "rgba(255, 255, 255, 0.1)",
+              border: "none",
+              color: "white",
+              padding: "1rem 2rem",
+              borderRadius: "12px",
+              fontWeight: "600",
+              cursor: "pointer",
+              transition: "all 0.2s",
+              fontSize: "1rem",
+            }}
+            onMouseOver={(e) => (e.target.style.background = "rgba(255, 255, 255, 0.2)")}
+            onMouseOut={(e) => (e.target.style.background = "rgba(255, 255, 255, 0.1)")}
+          >
+            <span>❤️</span>
+            <span>Yêu thích</span>
+          </button>
+
+          <button
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              background: "rgba(255, 255, 255, 0.1)",
+              border: "none",
+              color: "white",
+              padding: "1rem 2rem",
+              borderRadius: "12px",
+              fontWeight: "600",
+              cursor: "pointer",
+              transition: "all 0.2s",
+              fontSize: "1rem",
+            }}
+            onMouseOver={(e) => (e.target.style.background = "rgba(255, 255, 255, 0.2)")}
+            onMouseOut={(e) => (e.target.style.background = "rgba(255, 255, 255, 0.1)")}
+          >
+            <span>📤</span>
+            <span>Chia sẻ</span>
+          </button>
         </div>
       </div>
     </div>
   )
 }
+
+export default MovieDetail

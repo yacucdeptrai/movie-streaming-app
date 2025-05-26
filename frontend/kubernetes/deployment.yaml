@@ -5,7 +5,7 @@ metadata:
   labels:
     app: frontend
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: frontend
@@ -16,13 +16,20 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: yadeptrai/movie-streaming-frontend:latest
+        image: movie-streaming-frontend:latest
         imagePullPolicy: Never
         ports:
         - containerPort: 80
         env:
         - name: NODE_ENV
           value: "production"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
         livenessProbe:
           httpGet:
             path: /health
@@ -44,6 +51,8 @@ spec:
   selector:
     app: frontend
   ports:
-  - port: 80
+  - name: http
+    port: 80
     targetPort: 80
+    protocol: TCP
   type: ClusterIP
