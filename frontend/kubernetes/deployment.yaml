@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: movie-streaming-frontend:v3
+        image: yadeptrai/movie-streaming-frontend:latest
         imagePullPolicy: Never
         ports:
         - containerPort: 80

@@ -10,17 +10,19 @@ import NotFoundPage from "./pages/NotFoundPage"
 function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<HomePage />} />
+      <Layout>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/movie/:id" element={<MovieDetailPage />} />
+          <Route path="/watch/:id" element={<VideoPlayerPage />} />
           <Route path="/search" element={<SearchPage />} />
-          <Route path="/category/:categoryId" element={<CategoryPage />} />
-          <Route path="/movie/:movieId" element={<MovieDetailPage />} />
+          <Route path="/category/:category" element={<CategoryPage />} />
+          <Route path="/country/:country" element={<CategoryPage />} />
+          <Route path="/year/:year" element={<CategoryPage />} />
+          <Route path="/top-phim" element={<CategoryPage />} />
           <Route path="*" element={<NotFoundPage />} />
-        </Route>
-        {/* Video player on separate route without layout */}
-        <Route path="/watch/:movieId" element={<VideoPlayerPage />} />
-      </Routes>
+        </Routes>
+      </Layout>
     </Router>
   )
 }
